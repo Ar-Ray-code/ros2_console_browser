@@ -6,224 +6,156 @@
     <title>ROS2 Log Viewer Test Client</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
             padding: 20px;
             background-color: #f5f5f5;
         }
         .container {
             background: white;
-            border-radius: 8px;
-            padding: 20px;
             margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        h1, h2 {
-            color: #333;
-        }
-        button {
-            background-color: #4CAF50;
+        .api-info button {
+            margin-right: 10px;
+            margin-bottom: 10px;
+            padding: 8px 16px;
+            background: #007acc;
             color: white;
-            padding: 10px 20px;
             border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .api-info button:hover {
+            background: #005999;
+        }
+        .nodes-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .node-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafafa;
+        }
+        .node-card:hover {
+            border-color: #007acc;
+            box-shadow: 0 2px 8px rgba(0,122,204,0.2);
+        }
+        .node-topics {
+            margin-top: 8px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .log-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+        }
+        .log-entry {
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .log-time {
+            color: #666;
+            margin-right: 10px;
+        }
+        .log-level {
+            margin-right: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .log-level.info { background: #e3f2fd; color: #1976d2; }
+        .log-level.warn { background: #fff3e0; color: #f57c00; }
+        .log-level.error { background: #ffebee; color: #d32f2f; }
+        .log-level.debug { background: #f3e5f5; color: #7b1fa2; }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success { background: #e8f5e8; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .status.error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        .tabs {
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            border-bottom-color: #007acc;
+            color: #007acc;
+        }
+        .system-list {
+            margin-top: 15px;
+        }
+        .system-item {
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .system-item-name {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+        }
+        .system-item-details {
+            padding: 10px 15px;
+        }
+        .system-item-detail {
+            padding: 2px 0;
+            color: #666;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        #refresh-btn, #auto-refresh-btn, #stop-refresh-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
             margin-right: 10px;
         }
-        button:hover {
-            background-color: #45a049;
+        #refresh-btn:hover, #auto-refresh-btn:hover, #stop-refresh-btn:hover {
+            background: #218838;
         }
-        .nodes-list {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
+        #stop-refresh-btn {
+            background: #dc3545;
         }
-        .nodes-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin: 20px 0;
+        #stop-refresh-btn:hover {
+            background: #c82333;
         }
-        .node-card {
-            background: #e3f2fd;
-            padding: 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s;
-            min-width: 200px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .node-card:hover {
-            background: #bbdefb;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            transform: translateY(-2px);
-        }
-        .node-card strong {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 1.1em;
-        }
-        .node-card div {
-            font-size: 0.9em;
-            color: #555;
-            margin-bottom: 3px;
-        }
-        
-        .node-card .node-topics {
-            margin-top: 8px;
-            font-size: 0.85em;
-        }
-        .log-container {
-            background: #f5f5f5;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        .window-popup-notice {
+            background: #fff3cd;
+            color: #856404;
             padding: 10px;
-            height: 300px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 14px;
-        }
-        .log-entry {
-            padding: 4px 0;
-            border-bottom: 1px solid #eee;
-            font-family: monospace;
-            white-space: nowrap;
-            overflow-x: hidden;
-            text-overflow: ellipsis;
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-        }
-        
-        .log-time {
-            color: #666;
-            padding-right: 8px;
-            flex-shrink: 0;
-        }
-        
-        .log-level {
-            font-weight: bold;
-            padding: 2px 4px;
-            margin-right: 8px;
-            border-radius: 3px;
-            flex-shrink: 0;
-        }
-        
-        .log-message {
-            flex-grow: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .log-level.debug {
-            color: #0066cc;
-            background-color: #e6f7ff;
-        }
-        
-        .log-level.info {
-            color: #009900;
-            background-color: #ebffeb;
-        }
-        
-        .log-level.warn {
-            color: #cc7a00;
-            background-color: #fff7e6;
-        }
-        
-        .log-level.error {
-            color: #cc0000;
-            background-color: #ffebeb;
-        }
-        
-        .log-level.fatal {
-            color: #ffffff;
-            background-color: #cc0000;
-        }
-        .status {
-            padding: 10px;
+            border-radius: 4px;
             margin: 10px 0;
-            border-radius: 4px;
-        }
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-        }
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .api-info {
-            background: #e7f3ff;
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-        }
-        pre {
-            background: #f5f5f5;
-            padding: 10px;
-            border-radius: 4px;
-            overflow-x: auto;
-        }
-        
-        .tabs {
-            display: flex;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .tab-btn {
-            padding: 8px 16px;
-            border: none;
-            background: none;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-right: 5px;
-            font-weight: normal;
-            color: #555;
-        }
-        
-        .tab-btn.active {
-            border-bottom: 2px solid #4CAF50;
-            font-weight: bold;
-            color: #000;
-        }
-        
-        .tab-content {
-            margin-top: 15px;
-        }
-        
-        .system-list {
-            margin-top: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .system-item {
-            background: #f9f9f9;
-            border: 1px solid #eee;
-            border-radius: 4px;
-            padding: 12px;
-        }
-        
-        .system-item-name {
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-        
-        .system-item-detail {
-            font-family: monospace;
-            margin-left: 15px;
-            font-size: 0.9em;
-            color: #555;
-        }
-        
-        .system-item-toggle {
-            cursor: pointer;
-            color: #4CAF50;
-            font-size: 0.9em;
-            margin-top: 5px;
+            border: 1px solid #ffeaa7;
         }
     </style>
 </head>
@@ -243,6 +175,14 @@
 
     <div class="container">
         <h2>Available Nodes</h2>
+        <label style="display:block;margin-bottom:8px;">
+            <input type="checkbox" id="open-in-new-window"> 
+            Open in new window
+        </label>
+        <div class="window-popup-notice">
+            <strong>Note:</strong> New windows may not open due to your browser's popup blocker settings.
+            If this happens, please allow popups for this site in your browser settings.
+        </div>
         <div id="nodes-list" class="nodes-list"></div>
     </div>
 
@@ -331,10 +271,6 @@
                         topicsHtml += '</div>';
                     }
                     
-                    // log
-                    console.log('Node:', node);
-                    console.log('Node Full Name:', node.full_name);
-                    console.log('Node Name:', node.name);
                     // Create node information display
                     nodeCard.innerHTML = `
                         <strong>${node.name}</strong>
@@ -344,7 +280,6 @@
                         ${topicsHtml}
                     `;
                     
-                    // Pass the node object correctly
                     nodeCard.onclick = () => selectNode(node);
                     nodesList.appendChild(nodeCard);
                 });
@@ -358,6 +293,175 @@
         }
 
         function selectNode(node) {
+            const openInNewWindow = document.getElementById('open-in-new-window').checked;
+            if (openInNewWindow) {
+                const logsHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node Logs - ${node.name}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .log-container {
+            max-height: 70vh;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+            margin-top: 15px;
+        }
+        .log-entry {
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .log-time {
+            color: #666;
+            margin-right: 10px;
+        }
+        .log-level {
+            margin-right: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .log-level.info { background: #e3f2fd; color: #1976d2; }
+        .log-level.warn { background: #fff3e0; color: #f57c00; }
+        .log-level.error { background: #ffebee; color: #d32f2f; }
+        .log-level.debug { background: #f3e5f5; color: #7b1fa2; }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success { background: #e8f5e8; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .status.error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #218838;
+        }
+        button#stop-refresh-btn {
+            background: #dc3545;
+        }
+        button#stop-refresh-btn:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Node Logs</h2>
+        <div id="selected-node"><h3>Logs for: ${node.name}</h3></div>
+        <button onclick="refreshLogs()" id="refresh-btn">Refresh Logs</button>
+        <button onclick="startAutoRefresh()" id="auto-refresh-btn">Start Auto Refresh</button>
+        <button onclick="stopAutoRefresh()" id="stop-refresh-btn" style="display:none;">Stop Auto Refresh</button>
+        <div id="log-status"></div>
+        <div id="logs-container" class="log-container"></div>
+    </div>
+    <script>
+        const API_BASE = '${API_BASE}';
+        let selectedNode = ${JSON.stringify(node.full_name)};
+        let autoRefreshInterval = null;
+        
+        async function fetchNodeLogs(nodeName) {
+            try {
+                if (!nodeName) throw new Error('Node name is undefined or empty');
+                const encodedNodeName = encodeURIComponent(nodeName).replace(/%2F/g, '');
+                const response = await fetch(\`\${API_BASE}/nodes/\${encodedNodeName}/logs\`);
+                if (!response.ok) throw new Error(\`HTTP error \${response.status}\`);
+                const logs = await response.json();
+                const logsContainer = document.getElementById('logs-container');
+                logsContainer.innerHTML = '';
+                if (logs.length === 0) {
+                    logsContainer.innerHTML = '<div class="log-entry">No logs available for this node.</div>';
+                } else {
+                    logs.forEach(log => {
+                        const logEntry = document.createElement('div');
+                        logEntry.className = 'log-entry';
+                        const timestamp = log.timestamp ? new Date((log.timestamp.sec * 1000) + (log.timestamp.nanosec / 1000000)).toISOString() : '';
+                        const level = log.level || '';
+                        const message = log.message || '';
+                        logEntry.innerHTML = \`
+                            <span class="log-time">\${timestamp}</span>
+                            <span class="log-level \${level.toLowerCase()}">[\${level}]</span>
+                            <span class="log-message">\${message}</span>
+                        \`;
+                        logsContainer.appendChild(logEntry);
+                    });
+                }
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+                document.getElementById('log-status').innerHTML = '<div class="status success">Loaded ' + logs.length + ' log entries</div>';
+            } catch (error) {
+                document.getElementById('log-status').innerHTML = '<div class="status error">Failed to fetch logs: ' + error.message + '</div>';
+            }
+        }
+        
+        function refreshLogs() {
+            if (selectedNode) fetchNodeLogs(selectedNode);
+        }
+        
+        function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(() => { refreshLogs(); }, 1000);
+            document.getElementById('auto-refresh-btn').style.display = 'none';
+            document.getElementById('stop-refresh-btn').style.display = 'inline-block';
+            document.getElementById('log-status').innerHTML = '<div class="status success">Auto-refresh enabled (1s interval)</div>';
+        }
+        
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
+            document.getElementById('auto-refresh-btn').style.display = 'inline-block';
+            document.getElementById('stop-refresh-btn').style.display = 'none';
+            document.getElementById('log-status').innerHTML = '<div class="status">Auto-refresh stopped</div>';
+        }
+        
+        window.onload = () => { fetchNodeLogs(selectedNode); };
+    <\/script>
+</body>
+</html>
+                `;
+                
+                try {
+                    const windowFeatures = 'width=1000,height=700,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no';
+                    const win = window.open('about:blank', `node_logs_${Date.now()}`, windowFeatures);
+                    
+                    if (!win) {
+                        alert('Popup was blocked. Please allow popups for this site in your browser settings.');
+                        return;
+                    }
+                    
+                    win.document.write(logsHtml);
+                    win.document.close();
+                    win.focus();
+                    
+                } catch (error) {
+                    console.error('Failed to open new window:', error);
+                    alert('Could not open a new window. Please check your popup blocker settings.');
+                }
+                return;
+            }
+            
             // Save the node's full_name for later use
             selectedNode = node.full_name;
             
@@ -375,18 +479,11 @@
 
         async function fetchNodeLogs(nodeName) {
             try {
-                // Make sure we have a valid node name
                 if (!nodeName) {
                     throw new Error("Node name is undefined or empty");
                 }
                 
-                // Encode the node name properly for the URI
                 const encodedNodeName = encodeURIComponent(nodeName).replace(/%2F/g, '');
-                // 
-                
-                console.log('Fetching logs for:', nodeName);
-                console.log('Encoded URL:', `${API_BASE}/nodes/${encodedNodeName}/logs`);
-                
                 const response = await fetch(`${API_BASE}/nodes/${encodedNodeName}/logs`);
                 if (!response.ok) {
                     throw new Error(`HTTP error ${response.status}`);
@@ -404,7 +501,6 @@
                         const logEntry = document.createElement('div');
                         logEntry.className = 'log-entry';
                         
-                        // Format log entry based on the returned structure
                         const timestamp = log.timestamp ? 
                             new Date((log.timestamp.sec * 1000) + (log.timestamp.nanosec / 1000000)).toISOString() : 
                             '';
@@ -412,7 +508,6 @@
                         const level = log.level || '';
                         const message = log.message || '';
                         
-                        // Display formatted log information
                         logEntry.innerHTML = `
                             <span class="log-time">${timestamp}</span>
                             <span class="log-level ${level.toLowerCase()}">[${level}]</span>
@@ -423,7 +518,6 @@
                     });
                 }
                 
-                // Auto-scroll to bottom
                 logsContainer.scrollTop = logsContainer.scrollHeight;
                 
                 document.getElementById('log-status').innerHTML = 
@@ -448,7 +542,7 @@
             
             autoRefreshInterval = setInterval(() => {
                 refreshLogs();
-            }, 1000); // Refresh every second
+            }, 1000);
             
             document.getElementById('auto-refresh-btn').style.display = 'none';
             document.getElementById('stop-refresh-btn').style.display = 'inline-block';
@@ -468,7 +562,6 @@
                 '<div class="status">Auto-refresh stopped</div>';
         }
 
-        // Functions for Topics and Services
         async function fetchTopics() {
             try {
                 const response = await fetch(`${API_BASE}/topics`);
@@ -489,11 +582,9 @@
                     const topicItem = document.createElement('div');
                     topicItem.className = 'system-item';
                     
-                    const detailsId = `topic-${topicName.replace(/\//g, '-')}`;
-                    
                     topicItem.innerHTML = `
                         <div class="system-item-name">${topicName}</div>
-                        <div id="${detailsId}" class="system-item-details">
+                        <div class="system-item-details">
                             ${Array.isArray(nodes) && nodes.length > 0 
                                 ? nodes.map(node => `<div class="system-item-detail">${node}</div>`).join('')
                                 : '<div class="system-item-detail">No nodes using this topic</div>'}
@@ -505,7 +596,6 @@
             } catch (error) {
                 document.getElementById('topics-list').innerHTML = 
                     `<div class="status error">Failed to fetch topics: ${error.message}</div>`;
-                console.error("Error fetching topics:", error);
             }
         }
         
@@ -529,11 +619,9 @@
                     const serviceItem = document.createElement('div');
                     serviceItem.className = 'system-item';
                     
-                    const detailsId = `service-${serviceName.replace(/\//g, '-')}`;
-                    
                     serviceItem.innerHTML = `
                         <div class="system-item-name">${serviceName}</div>
-                        <div id="${detailsId}" class="system-item-details">
+                        <div class="system-item-details">
                             ${Array.isArray(nodes) && nodes.length > 0 
                                 ? nodes.map(node => `<div class="system-item-detail">${node}</div>`).join('')
                                 : '<div class="system-item-detail">No nodes providing this service</div>'}
@@ -545,28 +633,22 @@
             } catch (error) {
                 document.getElementById('services-list').innerHTML = 
                     `<div class="status error">Failed to fetch services: ${error.message}</div>`;
-                console.error("Error fetching services:", error);
             }
         }
         
         function switchTab(tabName) {
-            // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.style.display = 'none';
             });
             
-            // Show selected tab
             document.getElementById(`${tabName}-tab`).style.display = 'block';
             
-            // Update active button
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
             
-            // Find the button that called this function and make it active
             event.target.classList.add('active');
             
-            // Load data for the tab if needed
             if (tabName === 'topics') {
                 fetchTopics();
             } else if (tabName === 'services') {
@@ -574,11 +656,10 @@
             }
         }
 
-        // Initial load
         window.onload = () => {
             fetchApiInfo();
             fetchNodes();
-            fetchTopics(); // Load topics by default
+            fetchTopics();
         };
     </script>
 </body>
