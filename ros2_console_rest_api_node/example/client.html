@@ -437,7 +437,7 @@
         async function fetchNodeLogs(nodeName) {
             try {
                 if (!nodeName) throw new Error('Node name is undefined or empty');
-                const encodedNodeName = encodeURIComponent(nodeName).replace(/%2F/g, '');
+                const encodedNodeName = encodeURIComponent(nodeName).replace(/^%2F/, '');
                 const response = await fetch(\`\${API_BASE}/nodes/\${encodedNodeName}/logs\`);
                 if (!response.ok) throw new Error(\`HTTP error \${response.status}\`);
                 const logs = await response.json();
