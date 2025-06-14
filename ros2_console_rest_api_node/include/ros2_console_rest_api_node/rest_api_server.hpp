@@ -1,5 +1,5 @@
-#ifndef ROS2_CONSOLE_BROWSER_NODE__REST_API_SERVER_HPP_
-#define ROS2_CONSOLE_BROWSER_NODE__REST_API_SERVER_HPP_
+#ifndef ros2_console_rest_api_node__REST_API_SERVER_HPP_
+#define ros2_console_rest_api_node__REST_API_SERVER_HPP_
 
 #include <httplib.h>
 #include <nlohmann/json.hpp>
@@ -17,7 +17,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace ros2_console_browser_node
+namespace ros2_console_rest_api_node
 {
 
 using json = nlohmann::json;
@@ -55,6 +55,6 @@ private:
   std::string get_current_timestamp_string() const;
 };
 
-}  // namespace ros2_console_browser_node
+}  // namespace ros2_console_rest_api_node
 
-#endif  // ROS2_CONSOLE_BROWSER_NODE__REST_API_SERVER_HPP_
+#endif  // ros2_console_rest_api_node__REST_API_SERVER_HPP_

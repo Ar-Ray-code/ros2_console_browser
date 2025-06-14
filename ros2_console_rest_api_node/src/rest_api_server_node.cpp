@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 
-#include "ros2_console_browser_node/rest_api_server.hpp"
+#include "ros2_console_rest_api_node/rest_api_server.hpp"
 
 std::atomic<bool> g_shutdown_requested(false);
 
@@ -19,7 +19,7 @@ void signal_handler(int signum) {
   g_shutdown_requested.store(true);
 }
 
-namespace ros2_console_browser_node
+namespace ros2_console_rest_api_node
 {
 
 RestApiServer::RestApiServer(const rclcpp::NodeOptions & options)
@@ -524,7 +524,7 @@ std::string RestApiServer::get_current_timestamp_string() const
   return ss.str();
 }
 
-}  // namespace ros2_console_browser_node
+}  // namespace ros2_console_rest_api_node
 
 int main(int argc, char ** argv)
 {
@@ -532,7 +532,7 @@ int main(int argc, char ** argv)
   rclcpp::NodeOptions options;
   options.automatically_declare_parameters_from_overrides(true);
   
-  auto node = std::make_shared<ros2_console_browser_node::RestApiServer>(options);
+  auto node = std::make_shared<ros2_console_rest_api_node::RestApiServer>(options);
   
   int port = 8080;
   std::string host = "0.0.0.0";

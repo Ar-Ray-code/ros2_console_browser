@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(ros2_console_browser_node)
+project(ros2_console_rest_api_node)
 
 set(CMAKE_CXX_STANDARD 20)
 
