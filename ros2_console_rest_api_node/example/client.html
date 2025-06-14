@@ -461,9 +461,7 @@
                     });
                 }
                 logsContainer.scrollTop = logsContainer.scrollHeight;
-                document.getElementById('log-status').innerHTML = '<div class="status success">Loaded ' + logs.length + ' log entries</div>';
             } catch (error) {
-                document.getElementById('log-status').innerHTML = '<div class="status error">Failed to fetch logs: ' + error.message + '</div>';
             }
         }
         
@@ -482,8 +480,6 @@
             
             document.getElementById('auto-refresh-btn').style.display = 'none';
             document.getElementById('stop-refresh-btn').style.display = 'inline-block';
-            document.getElementById('log-status').innerHTML = 
-                '<div class="status success">Auto-refresh enabled (0.1s interval)</div>';
         }
         
         function stopAutoRefresh() {
@@ -494,8 +490,6 @@
             
             document.getElementById('auto-refresh-btn').style.display = 'inline-block';
             document.getElementById('stop-refresh-btn').style.display = 'none';
-            document.getElementById('log-status').innerHTML = 
-                '<div class="status">Auto-refresh stopped</div>';
         }
         
         window.onload = () => { fetchNodeLogs(selectedNode); };

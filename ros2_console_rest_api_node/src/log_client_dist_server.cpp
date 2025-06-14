@@ -411,7 +411,6 @@ public:
     </div>
     
     <script>
-        // Generate QR codes
 )";
         
         for (size_t i = 0; i < qr_urls_.size(); ++i) {
