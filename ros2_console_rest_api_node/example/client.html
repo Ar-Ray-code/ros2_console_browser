@@ -346,188 +346,250 @@
 
 
         function selectNode(node) {
-            if (1) {
-                const logsHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Node Logs - ${node.name}</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .log-container {
-            max-height: 70vh;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: #f9f9f9;
-            margin-top: 15px;
-        }
-        .log-entry {
-            padding: 8px 12px;
-            border-bottom: 1px solid #eee;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-        }
-        .log-time {
-            color: #666;
-            margin-right: 10px;
-        }
-        .log-level {
-            margin-right: 10px;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-weight: bold;
-        }
-        .log-level.info { background: #e3f2fd; color: #1976d2; }
-        .log-level.warn { background: #fff3e0; color: #f57c00; }
-        .log-level.error { background: #ffebee; color: #d32f2f; }
-        .log-level.debug { background: #f3e5f5; color: #7b1fa2; }
-        .status {
-            padding: 8px 12px;
-            border-radius: 4px;
-            margin: 10px 0;
-        }
-        .status.success { background: #e8f5e8; color: #2e7d32; border: 1px solid #c8e6c9; }
-        .status.error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
-        button {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 10px;
-        }
-        button:hover {
-            background: #218838;
-        }
-        button#stop-refresh-btn {
-            background: #dc3545;
-        }
-        button#stop-refresh-btn:hover {
-            background: #c82333;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <button onclick="stopAutoRefresh()" id="stop-refresh-btn">Stop Auto Refresh</button>
-        <button onclick="startAutoRefresh()" id="auto-refresh-btn" style="display:none;">Start Auto Refresh</button>
-        
-        <div id="logs-container" class="log-container"></div>
-    </div>
-    <script>
-        const API_BASE = '${API_BASE}';
-        let selectedNode = ${JSON.stringify(node.full_name)};
-        let autoRefreshInterval = null;
-        startAutoRefresh();
-        
-        async function fetchNodeLogs(nodeName) {
             try {
-                if (!nodeName) throw new Error('Node name is undefined or empty');
-                const encodedNodeName = encodeURIComponent(nodeName).replace(/^%2F/, '');
-                const response = await fetch(\`\${API_BASE}/nodes/\${encodedNodeName}/logs\`);
-                if (!response.ok) throw new Error(\`HTTP error \${response.status}\`);
-                const logs = await response.json();
-                const logsContainer = document.getElementById('logs-container');
-                logsContainer.innerHTML = '';
-                if (logs.length === 0) {
-                    logsContainer.innerHTML = '<div class="log-entry">No logs available for this node.</div>';
-                } else {
-                    logs.forEach(log => {
-                        const logEntry = document.createElement('div');
-                        logEntry.className = 'log-entry';
-                        const timestamp = log.timestamp.sec + '.' + parseInt(log.timestamp.nanosec / 1000000);
-                        const level = log.level || '';
-                        const message = log.message || '';
-                        logEntry.innerHTML = \`
-                            <span class="log-time">\${timestamp}</span>
-                            <span class="log-level \${level.toLowerCase()}">[\${level}]</span>
-                            <span class="log-message">\${message}</span>
-                        \`;
-                        logsContainer.appendChild(logEntry);
-                    });
-                }
-                logsContainer.scrollTop = logsContainer.scrollHeight;
-            } catch (error) {
-            }
-        }
-        
-        function refreshLogs() {
-            if (selectedNode) fetchNodeLogs(selectedNode);
-        }
-        
-        function startAutoRefresh() {
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-            }
-            
-            autoRefreshInterval = setInterval(() => {
-                refreshLogs();
-            }, 100);
-            
-            document.getElementById('auto-refresh-btn').style.display = 'none';
-            document.getElementById('stop-refresh-btn').style.display = 'inline-block';
-        }
-        
-        function stopAutoRefresh() {
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-                autoRefreshInterval = null;
-            }
-            
-            document.getElementById('auto-refresh-btn').style.display = 'inline-block';
-            document.getElementById('stop-refresh-btn').style.display = 'none';
-        }
-        
-        window.onload = () => { fetchNodeLogs(selectedNode); };
-    <\/script>
-</body>
-</html>
-                `;
+                console.log("Selected node:", node);
                 
-                try {
-                    const windowFeatures = 'width=1000,height=700,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no';
-                    const win = window.open('about:blank', `node_logs_${Date.now()}`, windowFeatures);
+                if (!node || (!node.full_name && !node.name)) {
+                    console.error("Invalid node object:", node);
+                    alert("Error: Invalid node information");
+                    return;
+                }
+                
+                // Open a new window first
+                const windowFeatures = 'width=1000,height=700,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no';
+                const win = window.open('about:blank', `node_logs_${Date.now()}`, windowFeatures);
+                
+                if (!win) {
+                    alert('Popup was blocked. Please allow popups for this site in your browser settings.');
+                    return;
+                }
+                
+                // Write the basic HTML structure to the new window
+                win.document.write('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Node Logs - ' + node.name + '</title></head><body></body></html>');
+                
+                // Add CSS styles
+                const style = win.document.createElement('style');
+                style.textContent = `
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        margin: 20px;
+                        background-color: #f5f5f5;
+                    }
+                    .container {
+                        background: white;
+                        padding: 20px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    }
+                    .log-container {
+                        max-height: 70vh;
+                        overflow-y: auto;
+                        border: 1px solid #ddd;
+                        border-radius: 4px;
+                        background: #f9f9f9;
+                        margin-top: 15px;
+                    }
+                    .log-entry {
+                        padding: 8px 12px;
+                        border-bottom: 1px solid #eee;
+                        font-family: 'Courier New', monospace;
+                        font-size: 0.9em;
+                    }
+                    .log-time {
+                        color: #666;
+                        margin-right: 10px;
+                    }
+                    .log-level {
+                        margin-right: 10px;
+                        padding: 2px 6px;
+                        border-radius: 3px;
+                        font-weight: bold;
+                    }
+                    .log-level.info { background: #e3f2fd; color: #1976d2; }
+                    .log-level.warn { background: #fff3e0; color: #f57c00; }
+                    .log-level.error { background: #ffebee; color: #d32f2f; }
+                    .log-level.debug { background: #f3e5f5; color: #7b1fa2; }
+                    .status {
+                        padding: 8px 12px;
+                        border-radius: 4px;
+                        margin: 10px 0;
+                    }
+                    .status.success { background: #e8f5e8; color: #2e7d32; border: 1px solid #c8e6c9; }
+                    .status.error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+                    button {
+                        background: #28a745;
+                        color: white;
+                        border: none;
+                        padding: 8px 16px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        margin-right: 10px;
+                    }
+                    button:hover {
+                        background: #218838;
+                    }
+                    button#stop-refresh-btn {
+                        background: #dc3545;
+                    }
+                    button#stop-refresh-btn:hover {
+                        background: #c82333;
+                    }
+                `;
+                win.document.head.appendChild(style);
+                
+                // Create container elements
+                const container = win.document.createElement('div');
+                container.className = 'container';
+                win.document.body.appendChild(container);
+                
+                // Add buttons
+                const stopBtn = win.document.createElement('button');
+                stopBtn.id = 'stop-refresh-btn';
+                stopBtn.textContent = 'Stop Auto Refresh';
+                container.appendChild(stopBtn);
+                
+                const startBtn = win.document.createElement('button');
+                startBtn.id = 'auto-refresh-btn';
+                startBtn.textContent = 'Start Auto Refresh';
+                startBtn.style.display = 'none';
+                container.appendChild(startBtn);
+                
+                // Add logs container
+                const logsContainer = win.document.createElement('div');
+                logsContainer.id = 'logs-container';
+                logsContainer.className = 'log-container';
+                container.appendChild(logsContainer);
+                
+                // Add script with necessary variables
+                const script = win.document.createElement('script');
+                // Ensure node.full_name exists and is properly serialized
+                const nodeFullName = node.full_name || node.name;
+                script.text = `
+                    const API_BASE = "${API_BASE}";
+                    let selectedNode = "${nodeFullName}";
+                    let autoRefreshInterval = null;
                     
-                    if (!win) {
-                        alert('Popup was blocked. Please allow popups for this site in your browser settings.');
-                        return;
+                    async function fetchNodeLogs(nodeName) {
+                        try {
+                            if (!nodeName) throw new Error('Node name is undefined or empty');
+                            
+                            console.log("Fetching logs for node:", nodeName);
+                            
+                            // Clean the node name string and prepare it for URL
+                            let cleanNodeName = nodeName;
+                            // Remove leading slash if present
+                            if (cleanNodeName.startsWith('/')) {
+                                cleanNodeName = cleanNodeName.substring(1);
+                            }
+                            
+                            // Special case: if node name contains slashes (like namespace/nodename),
+                            // we need to handle it differently
+                            let url = API_BASE + '/nodes/';
+                            
+                            // For node names with namespace, format as /namespace/node_name in the URL
+                            // Otherwise just use the node name directly
+                            url += cleanNodeName + '/logs';
+                            
+                            console.log("Request URL:", url);
+                            
+                            const response = await fetch(url);
+                            if (!response.ok) throw new Error('HTTP error ' + response.status);
+                            
+                            const logs = await response.json();
+                            const logsContainer = document.getElementById('logs-container');
+                            logsContainer.innerHTML = '';
+                            
+                            if (logs.length === 0) {
+                                logsContainer.innerHTML = '<div class="log-entry">No logs available for this node.</div>';
+                            } else {
+                                logs.forEach(log => {
+                                    const logEntry = document.createElement('div');
+                                    logEntry.className = 'log-entry';
+                                    
+                                    const timestamp = log.timestamp.sec + '.' + parseInt(log.timestamp.nanosec / 1000000);
+                                    const level = log.level || '';
+                                    const message = log.message || '';
+                                    
+                                    logEntry.innerHTML = 
+                                        '<span class="log-time">' + timestamp + '</span>' +
+                                        '<span class="log-level ' + level.toLowerCase() + '">[' + level + ']</span>' +
+                                        '<span class="log-message">' + message + '</span>';
+                                        
+                                    logsContainer.appendChild(logEntry);
+                                });
+                            }
+                            
+                            logsContainer.scrollTop = logsContainer.scrollHeight;
+                        } catch (error) {
+                            console.error('Error fetching logs:', error);
+                            const logsContainer = document.getElementById('logs-container');
+                            logsContainer.innerHTML = '<div class="log-entry status error">Error fetching logs: ' + error.message + '</div>';
+                        }
                     }
                     
-                    win.document.write(logsHtml);
-                    win.document.close();
-                    win.focus();
+                    function refreshLogs() {
+                        if (selectedNode) fetchNodeLogs(selectedNode);
+                    }
                     
-                } catch (error) {
-                    console.error('Failed to open new window:', error);
-                    alert('Could not open a new window. Please check your popup blocker settings.');
-                }
-                return;
-            }
-            
-            selectedNode = node.full_name;
-            
-            document.getElementById('selected-node').innerHTML = 
-                '<h3>Logs for: ' + node.name + '</h3>';
-            document.getElementById('refresh-btn').style.display = 'inline-block';
-            document.getElementById('auto-refresh-btn').style.display = 'inline-block';
-            document.getElementById('stop-refresh-btn').style.display = 'none';
-            document.getElementById('logs-container').style.display = 'block';
-            
-            fetchNodeLogs(node.full_name);
+                    function startAutoRefresh() {
+                        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+                        
+                        autoRefreshInterval = setInterval(() => {
+                            refreshLogs();
+                        }, 100);
+                        
+                        document.getElementById('auto-refresh-btn').style.display = 'none';
+                        document.getElementById('stop-refresh-btn').style.display = 'inline-block';
+                    }
+                    
+                    function stopAutoRefresh() {
+                        if (autoRefreshInterval) {
+                            clearInterval(autoRefreshInterval);
+                            autoRefreshInterval = null;
+                        }
+                        
+                        document.getElementById('auto-refresh-btn').style.display = 'inline-block';
+                        document.getElementById('stop-refresh-btn').style.display = 'none';
+                    }
+                    
+                    // Add event listeners
+                    document.getElementById('stop-refresh-btn').addEventListener('click', stopAutoRefresh);
+                    document.getElementById('auto-refresh-btn').addEventListener('click', startAutoRefresh);
+                    
+                    // We will use DOMContentLoaded for initialization instead
+                    // This prevents trying to access elements before they exist
+                    console.log("Node logs script loaded, selectedNode:", selectedNode);
+                `;
+                
+                // Add the script first
+                win.document.body.appendChild(script);
+                
+                // Add a separate initialization script that will run after everything is loaded
+                const initScript = win.document.createElement('script');
+                initScript.text = `
+                    // Initial load - make sure this runs after all DOM elements and the main script are loaded
+                    document.addEventListener('DOMContentLoaded', function() {
+                        // Make sure we have a valid node name
+                        if (selectedNode) {
+                            console.log("Loading logs for node:", selectedNode);
+                            fetchNodeLogs(selectedNode);
+                            startAutoRefresh();
+                        } else {
+                            console.error("No valid node name found");
+                            document.getElementById('logs-container').innerHTML = '<div class="log-entry status error">Error: No valid node name provided</div>';
+                        }
+                    });
+                `;
+                win.document.body.appendChild(initScript);
+                
+                // Close the document and focus
+                win.document.close();
+                win.focus();
+                
+            } catch (error) {
+                console.error('Failed to open new window:', error);
+                alert('Could not open a new window. Error: ' + error.message);
+            }            // Nothing else to do - the popup window is handling everything
         }
 
         async function fetchNodeLogs(nodeName) {
@@ -536,8 +598,22 @@
                     throw new Error("Node name is undefined or empty");
                 }
                 
-                const encodedNodeName = encodeURIComponent(nodeName).replace(/%2F/g, '');
-                const response = await fetch(`${API_BASE}/nodes/${encodedNodeName}/logs`);
+                // Remove leading slash and then encode the node name
+                const nameWithoutLeadingSlash = nodeName.replace(/^\//, '');
+                // Get namespace and node name parts
+                const parts = nameWithoutLeadingSlash.split('/');
+                // If there's a namespace, encode it properly
+                let url = API_BASE + '/nodes/';
+                if (parts.length > 1) {
+                    const namespace = parts.slice(0, -1).join('/');
+                    const nodeName = parts[parts.length-1];
+                    url += namespace + '/' + nodeName;
+                } else {
+                    // No namespace, just node name
+                    url += nameWithoutLeadingSlash;
+                }
+                url += '/logs';
+                const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error(`HTTP error ${response.status}`);
                 }
