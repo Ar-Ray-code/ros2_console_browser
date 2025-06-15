@@ -19,7 +19,7 @@ public:
         declare_parameter("target_port", 8081);
         declare_parameter("target_ip_keyword", "target-ip");
         declare_parameter("qr_distribute_count", 1);
-        declare_parameter("show_qr_code", false);
+        declare_parameter("show_qr_code", true);
         declare_parameter("qr_location", "cli");
         declare_parameter("rest_api_server_ip", "localhost");
         declare_parameter("rest_api_server_port", 8080);
@@ -221,27 +221,11 @@ private:
             res.set_content(json_response, "application/json");
         });
         
-        
         server_thread_ = std::thread([this]() {
             std::cout << "HTTP Server starting on " << target_ip_ << ":" << target_port_ << std::endl;
             if (!server_->listen(target_ip_.c_str(), target_port_)) {
                 std::cerr << "Failed to start HTTP server on " << target_ip_ << ":" << target_port_ << std::endl;
             }
-        });
-        
-        server_->Get("/qr", [this](const httplib::Request&, httplib::Response& res) {
-            std::string qr_html = generateQRCodeHtml();
-            res.set_content(qr_html, "text/html");
-        });
-        
-        server_->Get("/qr/json", [this](const httplib::Request&, httplib::Response& res) {
-            std::string json_response = "{\"qr_urls\": [";
-            for (size_t i = 0; i < qr_urls_.size(); ++i) {
-                json_response += "\"" + qr_urls_[i] + "\"";
-                if (i < qr_urls_.size() - 1) json_response += ",";
-            }
-            json_response += "]}";
-            res.set_content(json_response, "application/json");
         });
         
         std::cout << "Client Distribution Server started successfully" << std::endl;
@@ -254,10 +238,6 @@ private:
         } else {
             std::cout << "REST API:    http://" << rest_api_server_ip_ << ":" << rest_api_server_port_ << std::endl;
         }
-        if (show_qr_code_) {
-            std::cout << "QR Codes:    http://" << display_ip << ":" << target_port_ << "/qr" << std::endl;
-        }
-        std::cout << "==================" << std::endl;
     }
     
 public:
@@ -276,13 +256,10 @@ public:
             std::cout << "Generated QR URL " << i + 1 << ": " << url << std::endl;
         }
         
-        // QRコード表示
         if (qr_location_ == "cli") {
             showQRCodeCLI();
-        } else if (qr_location_ == "browser") {
-            showQRCodeBrowser();
-        } else if (qr_location_ == "gtk") {
-            showQRCodeGTK();
+        } else {
+            std::cout << "QR code display location not recognized: " << qr_location_ << std::endl;
         }
     }
     
@@ -327,102 +304,6 @@ public:
             }
         }
         std::cout << "====================" << std::endl;
-    }
-    
-    void showQRCodeBrowser()
-    {
-        if (!qr_urls_.empty()) {
-            std::string url = "http://" + getServerIP() + ":" + std::to_string(target_port_) + "/qr";
-            std::string cmd = "xdg-open '" + url + "' 2>/dev/null &";
-            if (system(cmd.c_str()) != 0) {
-                std::cout << "Could not open browser. Access QR codes at: " << url << std::endl;
-            }
-        }
-    }
-    
-    void showQRCodeGTK()
-    {
-        std::cout << "GTK QR code display not implemented yet." << std::endl;
-        showQRCodeCLI();
-    }
-    
-    std::string generateQRCodeHtml()
-    {
-        std::string html = R"(<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Codes - ROS2 Log Client</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .qr-item {
-            border: 1px solid #ddd;
-            margin: 20px 0;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .qr-url {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #333;
-        }
-        .qr-code {
-            margin: 20px 0;
-        }
-        .qr-instructions {
-            color: #666;
-            font-size: 14px;
-            margin-top: 10px;
-        }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-</head>
-<body>
-    <div class="container">
-        <h1>QR Codes for ROS2 Log Client</h1>
-        <p>Scan these QR codes to access the log client from your mobile device or other computers:</p>
-        
-)";
-        
-        for (size_t i = 0; i < qr_urls_.size(); ++i) {
-            html += "        <div class=\"qr-item\">\n";
-            html += "            <div class=\"qr-url\">" + qr_urls_[i] + "</div>\n";
-            html += "            <div class=\"qr-code\" id=\"qr" + std::to_string(i) + "\"></div>\n";
-            html += "            <div class=\"qr-instructions\">Scan this QR code to access the log client</div>\n";
-            html += "        </div>\n";
-        }
-        
-        html += R"(
-    </div>
-    
-    <script>
-)";
-        
-        for (size_t i = 0; i < qr_urls_.size(); ++i) {
-            html += "        QRCode.toCanvas(document.getElementById('qr" + std::to_string(i) + "'), '" + qr_urls_[i] + "', {width: 256, height: 256});\n";
-        }
-        
-        html += R"(
-    </script>
-</body>
-</html>)";
-        
-        return html;
     }
     
     ~LogClientDistServer()

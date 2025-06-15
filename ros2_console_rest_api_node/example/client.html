@@ -211,7 +211,6 @@
                     let topicsHtml = '';
                     
                     if (node.publishers && Object.keys(node.publishers).length > 0) {
-                        topicsHtml += '<div class="node-topics">Publishers:';
                         Object.entries(node.publishers).slice(0, 2).forEach(([topic, types]) => {
                             topicsHtml += `<div>→ ${topic}</div>`;
                         });
@@ -222,7 +221,6 @@
                     }
                     
                     if (node.subscribers && Object.keys(node.subscribers).length > 0) {
-                        topicsHtml += '<div class="node-topics">Subscribers:';
                         Object.entries(node.subscribers).slice(0, 2).forEach(([topic, types]) => {
                             topicsHtml += `<div>← ${topic}</div>`;
                         });
@@ -234,7 +232,6 @@
                     
                     nodeCard.innerHTML = `
                         <strong>${node.name}</strong>
-                        <div>Full name: ${node.full_name}</div>
                         ${node.namespace ? `<div>Namespace: ${node.namespace}</div>` : ''}
                         ${topicsHtml}
                     `;
