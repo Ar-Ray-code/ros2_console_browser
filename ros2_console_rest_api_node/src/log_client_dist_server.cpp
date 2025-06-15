@@ -193,6 +193,20 @@ private:
             res.set_content(content, "text/html");
         });
         
+        server_->Get(R"(/(style\.css|darkmode\.css|lightmode\.css))", [this](const httplib::Request& req, httplib::Response& res) {
+            std::string filename = req.path.substr(1); // remove leading '/'
+            std::string file_path = std::filesystem::path(client_html_path_).parent_path() / filename;
+            if (!std::filesystem::exists(file_path)) {
+                res.status = 404;
+                res.set_content("Not Found", "text/plain");
+                return;
+            }
+            std::ifstream file(file_path, std::ios::binary);
+            std::stringstream buffer;
+            buffer << file.rdbuf();
+            res.set_content(buffer.str(), "text/css");
+        });
+        
         server_->Get("/info", [this](const httplib::Request&, httplib::Response& res) {
             std::string server_ip;
             std::string api_base;
