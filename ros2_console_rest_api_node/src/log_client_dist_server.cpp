@@ -129,10 +129,6 @@ private:
         if (rest_api_server_port_ != 8080) {
             content = std::regex_replace(content, std::regex(":8080"), ":" + std::to_string(rest_api_server_port_));
         }
-        
-        content = std::regex_replace(content, std::regex("<strong>Server URL:</strong> http://localhost:8080"), "<strong>Server URL:</strong> " + api_base);
-        std::cout << "HTML modification completed. API_BASE set to: " << api_base << std::endl;
-        
         return content;
     }
     

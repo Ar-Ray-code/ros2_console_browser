@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ROS2 Log Viewer</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="lightmode.css" id="lightmode-css">
+    <link rel="stylesheet" href="darkmode.css" id="darkmode-css" disabled>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -160,35 +163,18 @@
     </style>
 </head>
 <body>
-    <h1>ROS2 Log Viewer Test Client</h1>
+    <div style="text-align:right;margin-bottom:10px;">
+        <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;vertical-align:middle;">
+            <input type="checkbox" id="darkmode-toggle" style="vertical-align:middle;width:0;height:0;opacity:0;position:absolute;">
+            <span style="vertical-align:middle;">Dark</span>
+        </label>
+    </div>
+    <h1 id="log-viewer-title">ROS2 Log Viewer Test Client</h1>
     
     <div class="container">
-        <h2>Available Nodes (<span id="api-status"></span> nodes)</h2>
+        <h2 id="available-nodes-title">Available Nodes (<span id="api-status"></span> nodes)</h2>
         <button onclick="fetchNodes()">Get Nodes</button>
         <div id="nodes-list" class="nodes-list"></div>
-    </div>
-
-    <div class="container">
-        <h2>ROS2 System Information</h2>
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('topics')">Topics</button>
-            <button class="tab-btn" onclick="switchTab('services')">Services</button>
-        </div>
-        <div id="topics-tab" class="tab-content">
-            <button onclick="fetchTopics()">Refresh Topics</button>
-            <div id="topics-list" class="system-list"></div>
-        </div>
-        <div id="services-tab" class="tab-content" style="display:none;">
-            <button onclick="fetchServices()">Refresh Services</button>
-            <div id="services-list" class="system-list"></div>
-        </div>
-    </div>
-
-    <div class="container">
-        <div class="api-info">
-            <p><strong>Server URL:</strong> http://localhost:8080</p>
-            
-        </div>
     </div>
 
     <script>
@@ -237,10 +223,28 @@
                     `;
                     
                     nodeCard.onclick = () => selectNode(node);
+                    // ダーク/ライトモードのクラスを付与
+                    const enabled = document.body.classList.contains('dark-mode');
+                    nodeCard.classList.add(enabled ? 'dark-mode' : 'light-mode');
+                    
                     nodesList.appendChild(nodeCard);
                 });
                 
                 document.getElementById('api-status').textContent = nodes.length;
+                // ダーク/ライトモードのクラスをapi-statusとh2にも付与
+                const apiStatus = document.getElementById('api-status');
+                const h2Title = document.getElementById('available-nodes-title');
+                if (document.body.classList.contains('dark-mode')) {
+                    apiStatus.classList.add('dark-mode');
+                    apiStatus.classList.remove('light-mode');
+                    h2Title.classList.add('dark-mode');
+                    h2Title.classList.remove('light-mode');
+                } else {
+                    apiStatus.classList.add('light-mode');
+                    apiStatus.classList.remove('dark-mode');
+                    h2Title.classList.add('light-mode');
+                    h2Title.classList.remove('dark-mode');
+                }
             } catch (error) {
                 console.error('Error fetching nodes:', error);
             }
@@ -279,8 +283,6 @@
                     topicsList.appendChild(topicItem);
                 }
             } catch (error) {
-                document.getElementById('topics-list').innerHTML = 
-                    `<div class="status error">Failed to fetch topics: ${error.message}</div>`;
             }
         }
         
@@ -688,6 +690,59 @@
                 '<div class="status">Auto-refresh stopped</div>';
         }
         
+        // ダークモード切り替え処理
+        const darkmodeToggle = document.getElementById('darkmode-toggle');
+        const darkmodeCss = document.getElementById('darkmode-css');
+        const lightmodeCss = document.getElementById('lightmode-css');
+        function setDarkMode(enabled) {
+            if (enabled) {
+                darkmodeCss.removeAttribute('disabled');
+                lightmodeCss.setAttribute('disabled', '');
+                document.body.classList.add('dark-mode');
+                document.body.classList.remove('light-mode');
+            } else {
+                darkmodeCss.setAttribute('disabled', '');
+                lightmodeCss.removeAttribute('disabled');
+                document.body.classList.remove('dark-mode');
+                document.body.classList.add('light-mode');
+            }
+            // 各要素のクラスも切り替え
+            const mode = enabled ? 'dark-mode' : 'light-mode';
+            const remove = enabled ? 'light-mode' : 'dark-mode';
+            [
+                '.container', '.node-card', '.log-container', '.log-entry', '.log-level', '.status', '.api-info', 'pre', '.tabs', '.tab-btn', '.system-list', '.system-item', '.system-item-name', '.system-item-detail', '#log-viewer-title'
+            ].forEach(sel => {
+                document.querySelectorAll(sel).forEach(e => {
+                    e.classList.add(mode);
+                    e.classList.remove(remove);
+                });
+            });
+            localStorage.setItem('darkmode', enabled ? '1' : '0');
+        }
+        darkmodeToggle.addEventListener('change', e => setDarkMode(e.target.checked));
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('darkmode');
+            if(saved === '1') {
+                darkmodeToggle.checked = true;
+                setDarkMode(true);
+            } else {
+                darkmodeToggle.checked = false;
+                setDarkMode(false);
+            }
+            // 初期ロード時にも全要素へクラスを付与
+            const enabled = darkmodeToggle.checked;
+            const mode = enabled ? 'dark-mode' : 'light-mode';
+            const remove = enabled ? 'light-mode' : 'dark-mode';
+            [
+                '.container', '.node-card', '.log-container', '.log-entry', '.log-level', '.status', '.api-info', 'pre', '.tabs', '.tab-btn', '.system-list', '.system-item', '.system-item-name', '.system-item-detail', '#log-viewer-title'
+            ].forEach(sel => {
+                document.querySelectorAll(sel).forEach(e => {
+                    e.classList.add(mode);
+                    e.classList.remove(remove);
+                });
+            });
+        });
+
         window.onload = () => {
             fetchNodes();
             fetchTopics();
