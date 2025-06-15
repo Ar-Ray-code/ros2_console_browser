@@ -347,35 +347,33 @@
         function selectNode(node) {
             try {
                 console.log("Selected node:", node);
-                
                 if (!node || (!node.full_name && !node.name)) {
                     console.error("Invalid node object:", node);
                     alert("Error: Invalid node information");
                     return;
                 }
-                
+                const isDarkMode = document.body.classList.contains('dark-mode');
                 // Open a new window first
                 const windowFeatures = 'width=1000,height=700,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no';
                 const win = window.open('about:blank', `node_logs_${Date.now()}`, windowFeatures);
-                
                 if (!win) {
                     alert('Popup was blocked. Please allow popups for this site in your browser settings.');
                     return;
                 }
-                
                 // Write the basic HTML structure to the new window
                 win.document.write('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Node Logs - ' + node.name + '</title></head><body></body></html>');
-                
                 // Add CSS styles
                 const style = win.document.createElement('style');
                 style.textContent = `
                     body {
                         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                         margin: 20px;
-                        background-color: #f5f5f5;
+                        background-color: ${isDarkMode ? '#222' : '#f5f5f5'};
+                        color: ${isDarkMode ? '#fff' : '#222'};
                     }
                     .container {
-                        background: white;
+                        background: ${isDarkMode ? '#111' : 'white'};
+                        color: ${isDarkMode ? '#fff' : '#222'};
                         padding: 20px;
                         border-radius: 8px;
                         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -383,19 +381,19 @@
                     .log-container {
                         max-height: 70vh;
                         overflow-y: auto;
-                        border: 1px solid #ddd;
+                        border: 1px solid #444;
                         border-radius: 4px;
-                        background: #f9f9f9;
+                        background: ${isDarkMode ? '#222' : '#f9f9f9'};
                         margin-top: 15px;
                     }
                     .log-entry {
                         padding: 8px 12px;
-                        border-bottom: 1px solid #eee;
+                        border-bottom: 1px solid ${isDarkMode ? '#333' : '#eee'};
                         font-family: 'Courier New', monospace;
                         font-size: 0.9em;
                     }
                     .log-time {
-                        color: #666;
+                        color: ${isDarkMode ? '#bbb' : '#666'};
                         margin-right: 10px;
                     }
                     .log-level {
@@ -404,17 +402,17 @@
                         border-radius: 3px;
                         font-weight: bold;
                     }
-                    .log-level.info { background: #e3f2fd; color: #1976d2; }
-                    .log-level.warn { background: #fff3e0; color: #f57c00; }
-                    .log-level.error { background: #ffebee; color: #d32f2f; }
-                    .log-level.debug { background: #f3e5f5; color: #7b1fa2; }
+                    .log-level.info { background: ${isDarkMode ? '#26334a' : '#e3f2fd'}; color: ${isDarkMode ? '#90caf9' : '#1976d2'}; }
+                    .log-level.warn { background: ${isDarkMode ? '#4a3a26' : '#fff3e0'}; color: ${isDarkMode ? '#ffb74d' : '#f57c00'}; }
+                    .log-level.error { background: ${isDarkMode ? '#4a2626' : '#ffebee'}; color: ${isDarkMode ? '#ef9a9a' : '#d32f2f'}; }
+                    .log-level.debug { background: ${isDarkMode ? '#3a264a' : '#f3e5f5'}; color: ${isDarkMode ? '#ce93d8' : '#7b1fa2'}; }
                     .status {
                         padding: 8px 12px;
                         border-radius: 4px;
                         margin: 10px 0;
                     }
-                    .status.success { background: #e8f5e8; color: #2e7d32; border: 1px solid #c8e6c9; }
-                    .status.error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+                    .status.success { background: ${isDarkMode ? '#1b3a2b' : '#e8f5e8'}; color: ${isDarkMode ? '#81c784' : '#2e7d32'}; border: 1px solid ${isDarkMode ? '#388e3c' : '#c8e6c9'}; }
+                    .status.error { background: ${isDarkMode ? '#4a2626' : '#ffebee'}; color: ${isDarkMode ? '#ef9a9a' : '#c62828'}; border: 1px solid ${isDarkMode ? '#d32f2f' : '#ffcdd2'}; }
                     button {
                         background: #28a745;
                         color: white;
@@ -729,7 +727,6 @@
                 darkmodeToggle.checked = false;
                 setDarkMode(false);
             }
-            // 初期ロード時にも全要素へクラスを付与
             const enabled = darkmodeToggle.checked;
             const mode = enabled ? 'dark-mode' : 'light-mode';
             const remove = enabled ? 'light-mode' : 'dark-mode';
