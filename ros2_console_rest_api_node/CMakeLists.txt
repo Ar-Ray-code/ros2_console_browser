@@ -26,6 +26,17 @@ target_link_libraries(${TARGET}
 )
 target_include_directories(${TARGET} PRIVATE ${CPP_HTTPLIB_INCLUDE_DIRS})
 
+# Add log client distribution server
+set(DIST_TARGET log_client_dist_server)
+ament_auto_add_executable(${DIST_TARGET}
+  src/log_client_dist_server.cpp
+)
+target_link_libraries(${DIST_TARGET} 
+  ${CPP_HTTPLIB_LIBRARIES}
+  nlohmann_json::nlohmann_json
+)
+target_include_directories(${DIST_TARGET} PRIVATE ${CPP_HTTPLIB_INCLUDE_DIRS})
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()

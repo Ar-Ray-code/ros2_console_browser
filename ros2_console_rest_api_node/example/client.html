@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROS2 Log Viewer Test Client</title>
+    <title>ROS2 Log Viewer</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="lightmode.css" id="lightmode-css">
+    <link rel="stylesheet" href="darkmode.css" id="darkmode-css" disabled>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -160,56 +163,18 @@
     </style>
 </head>
 <body>
-    <h1>ROS2 Log Viewer Test Client</h1>
-    
-    <div class="container">
-        <h2>API Server Info</h2>
-        <div class="api-info">
-            <p><strong>Server URL:</strong> http://localhost:8080</p>
-            <button onclick="fetchApiInfo()">Get API Info</button>
-            <button onclick="fetchNodes()">Get Nodes</button>
-        </div>
-        <div id="api-status"></div>
-        <pre id="api-response"></pre>
-    </div>
-
-    <div class="container">
-        <h2>Available Nodes</h2>
-        <label style="display:block;margin-bottom:8px;">
-            <input type="checkbox" id="open-in-new-window"> 
-            Open in new window
+    <div style="text-align:right;margin-bottom:10px;">
+        <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;vertical-align:middle;">
+            <input type="checkbox" id="darkmode-toggle" style="vertical-align:middle;width:0;height:0;opacity:0;position:absolute;">
+            <span style="vertical-align:middle;">Dark</span>
         </label>
-        <div class="window-popup-notice">
-            <strong>Note:</strong> New windows may not open due to your browser's popup blocker settings.
-            If this happens, please allow popups for this site in your browser settings.
-        </div>
-        <div id="nodes-list" class="nodes-list"></div>
     </div>
-
-    <div class="container">
-        <h2>Node Logs</h2>
-        <div id="selected-node"></div>
-        <button onclick="refreshLogs()" id="refresh-btn" style="display:none;">Refresh Logs</button>
-        <button onclick="startAutoRefresh()" id="auto-refresh-btn" style="display:none;">Start Auto Refresh</button>
-        <button onclick="stopAutoRefresh()" id="stop-refresh-btn" style="display:none;">Stop Auto Refresh</button>
-        <div id="log-status"></div>
-        <div id="logs-container" class="log-container" style="display:none;"></div>
-    </div>
+    <h1 id="log-viewer-title">ROS2 Log Viewer Test Client</h1>
     
     <div class="container">
-        <h2>ROS2 System Information</h2>
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('topics')">Topics</button>
-            <button class="tab-btn" onclick="switchTab('services')">Services</button>
-        </div>
-        <div id="topics-tab" class="tab-content">
-            <button onclick="fetchTopics()">Refresh Topics</button>
-            <div id="topics-list" class="system-list"></div>
-        </div>
-        <div id="services-tab" class="tab-content" style="display:none;">
-            <button onclick="fetchServices()">Refresh Services</button>
-            <div id="services-list" class="system-list"></div>
-        </div>
+        <h2 id="available-nodes-title">Available Nodes (<span id="api-status"></span> nodes)</h2>
+        <button onclick="fetchNodes()">Get Nodes</button>
+        <div id="nodes-list" class="nodes-list"></div>
     </div>
 
     <script>
@@ -217,20 +182,6 @@
         let selectedNode = null;
         let autoRefreshInterval = null;
 
-        async function fetchApiInfo() {
-            try {
-                const response = await fetch(`${API_BASE}/`);
-                const data = await response.json();
-                
-                document.getElementById('api-status').innerHTML = 
-                    '<div class="status success">Connected to API server</div>';
-                document.getElementById('api-response').textContent = 
-                    JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('api-status').innerHTML = 
-                    '<div class="status error">Failed to connect: ' + error.message + '</div>';
-            }
-        }
 
         async function fetchNodes() {
             try {
@@ -243,13 +194,9 @@
                 nodes.forEach(node => {
                     const nodeCard = document.createElement('div');
                     nodeCard.className = 'node-card';
-                    
-                    // Show node details
                     let topicsHtml = '';
                     
-                    // Handle publishers if present
                     if (node.publishers && Object.keys(node.publishers).length > 0) {
-                        topicsHtml += '<div class="node-topics">Publishers:';
                         Object.entries(node.publishers).slice(0, 2).forEach(([topic, types]) => {
                             topicsHtml += `<div>→ ${topic}</div>`;
                         });
@@ -259,9 +206,7 @@
                         topicsHtml += '</div>';
                     }
                     
-                    // Handle subscribers if present
                     if (node.subscribers && Object.keys(node.subscribers).length > 0) {
-                        topicsHtml += '<div class="node-topics">Subscribers:';
                         Object.entries(node.subscribers).slice(0, 2).forEach(([topic, types]) => {
                             topicsHtml += `<div>← ${topic}</div>`;
                         });
@@ -271,296 +216,40 @@
                         topicsHtml += '</div>';
                     }
                     
-                    // Create node information display
                     nodeCard.innerHTML = `
                         <strong>${node.name}</strong>
-                        <div>Full name: ${node.full_name}</div>
                         ${node.namespace ? `<div>Namespace: ${node.namespace}</div>` : ''}
-                        ${typeof node.log_count === 'number' ? `<div>Logs: ${node.log_count}</div>` : ''}
                         ${topicsHtml}
                     `;
                     
                     nodeCard.onclick = () => selectNode(node);
+                    // ダーク/ライトモードのクラスを付与
+                    const enabled = document.body.classList.contains('dark-mode');
+                    nodeCard.classList.add(enabled ? 'dark-mode' : 'light-mode');
+                    
                     nodesList.appendChild(nodeCard);
                 });
                 
-                document.getElementById('api-status').innerHTML = 
-                    '<div class="status success">Found ' + nodes.length + ' nodes</div>';
-            } catch (error) {
-                document.getElementById('api-status').innerHTML = 
-                    '<div class="status error">Failed to fetch nodes: ' + error.message + '</div>';
-            }
-        }
-
-        function selectNode(node) {
-            const openInNewWindow = document.getElementById('open-in-new-window').checked;
-            if (openInNewWindow) {
-                const logsHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Node Logs - ${node.name}</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .log-container {
-            max-height: 70vh;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: #f9f9f9;
-            margin-top: 15px;
-        }
-        .log-entry {
-            padding: 8px 12px;
-            border-bottom: 1px solid #eee;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-        }
-        .log-time {
-            color: #666;
-            margin-right: 10px;
-        }
-        .log-level {
-            margin-right: 10px;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-weight: bold;
-        }
-        .log-level.info { background: #e3f2fd; color: #1976d2; }
-        .log-level.warn { background: #fff3e0; color: #f57c00; }
-        .log-level.error { background: #ffebee; color: #d32f2f; }
-        .log-level.debug { background: #f3e5f5; color: #7b1fa2; }
-        .status {
-            padding: 8px 12px;
-            border-radius: 4px;
-            margin: 10px 0;
-        }
-        .status.success { background: #e8f5e8; color: #2e7d32; border: 1px solid #c8e6c9; }
-        .status.error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
-        button {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 10px;
-        }
-        button:hover {
-            background: #218838;
-        }
-        button#stop-refresh-btn {
-            background: #dc3545;
-        }
-        button#stop-refresh-btn:hover {
-            background: #c82333;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Node Logs</h2>
-        <div id="selected-node"><h3>Logs for: ${node.name}</h3></div>
-        <button onclick="refreshLogs()" id="refresh-btn">Refresh Logs</button>
-        <button onclick="startAutoRefresh()" id="auto-refresh-btn">Start Auto Refresh</button>
-        <button onclick="stopAutoRefresh()" id="stop-refresh-btn" style="display:none;">Stop Auto Refresh</button>
-        <div id="log-status"></div>
-        <div id="logs-container" class="log-container"></div>
-    </div>
-    <script>
-        const API_BASE = '${API_BASE}';
-        let selectedNode = ${JSON.stringify(node.full_name)};
-        let autoRefreshInterval = null;
-        
-        async function fetchNodeLogs(nodeName) {
-            try {
-                if (!nodeName) throw new Error('Node name is undefined or empty');
-                const encodedNodeName = encodeURIComponent(nodeName).replace(/%2F/g, '');
-                const response = await fetch(\`\${API_BASE}/nodes/\${encodedNodeName}/logs\`);
-                if (!response.ok) throw new Error(\`HTTP error \${response.status}\`);
-                const logs = await response.json();
-                const logsContainer = document.getElementById('logs-container');
-                logsContainer.innerHTML = '';
-                if (logs.length === 0) {
-                    logsContainer.innerHTML = '<div class="log-entry">No logs available for this node.</div>';
+                document.getElementById('api-status').textContent = nodes.length;
+                // ダーク/ライトモードのクラスをapi-statusとh2にも付与
+                const apiStatus = document.getElementById('api-status');
+                const h2Title = document.getElementById('available-nodes-title');
+                if (document.body.classList.contains('dark-mode')) {
+                    apiStatus.classList.add('dark-mode');
+                    apiStatus.classList.remove('light-mode');
+                    h2Title.classList.add('dark-mode');
+                    h2Title.classList.remove('light-mode');
                 } else {
-                    logs.forEach(log => {
-                        const logEntry = document.createElement('div');
-                        logEntry.className = 'log-entry';
-                        const timestamp = log.timestamp ? new Date((log.timestamp.sec * 1000) + (log.timestamp.nanosec / 1000000)).toISOString() : '';
-                        const level = log.level || '';
-                        const message = log.message || '';
-                        logEntry.innerHTML = \`
-                            <span class="log-time">\${timestamp}</span>
-                            <span class="log-level \${level.toLowerCase()}">[\${level}]</span>
-                            <span class="log-message">\${message}</span>
-                        \`;
-                        logsContainer.appendChild(logEntry);
-                    });
+                    apiStatus.classList.add('light-mode');
+                    apiStatus.classList.remove('dark-mode');
+                    h2Title.classList.add('light-mode');
+                    h2Title.classList.remove('dark-mode');
                 }
-                logsContainer.scrollTop = logsContainer.scrollHeight;
-                document.getElementById('log-status').innerHTML = '<div class="status success">Loaded ' + logs.length + ' log entries</div>';
             } catch (error) {
-                document.getElementById('log-status').innerHTML = '<div class="status error">Failed to fetch logs: ' + error.message + '</div>';
-            }
-        }
-        
-        function refreshLogs() {
-            if (selectedNode) fetchNodeLogs(selectedNode);
-        }
-        
-        function startAutoRefresh() {
-            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-            autoRefreshInterval = setInterval(() => { refreshLogs(); }, 1000);
-            document.getElementById('auto-refresh-btn').style.display = 'none';
-            document.getElementById('stop-refresh-btn').style.display = 'inline-block';
-            document.getElementById('log-status').innerHTML = '<div class="status success">Auto-refresh enabled (1s interval)</div>';
-        }
-        
-        function stopAutoRefresh() {
-            if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
-            document.getElementById('auto-refresh-btn').style.display = 'inline-block';
-            document.getElementById('stop-refresh-btn').style.display = 'none';
-            document.getElementById('log-status').innerHTML = '<div class="status">Auto-refresh stopped</div>';
-        }
-        
-        window.onload = () => { fetchNodeLogs(selectedNode); };
-    <\/script>
-</body>
-</html>
-                `;
-                
-                try {
-                    const windowFeatures = 'width=1000,height=700,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no';
-                    const win = window.open('about:blank', `node_logs_${Date.now()}`, windowFeatures);
-                    
-                    if (!win) {
-                        alert('Popup was blocked. Please allow popups for this site in your browser settings.');
-                        return;
-                    }
-                    
-                    win.document.write(logsHtml);
-                    win.document.close();
-                    win.focus();
-                    
-                } catch (error) {
-                    console.error('Failed to open new window:', error);
-                    alert('Could not open a new window. Please check your popup blocker settings.');
-                }
-                return;
-            }
-            
-            // Save the node's full_name for later use
-            selectedNode = node.full_name;
-            
-            // Update the UI
-            document.getElementById('selected-node').innerHTML = 
-                '<h3>Logs for: ' + node.name + '</h3>';
-            document.getElementById('refresh-btn').style.display = 'inline-block';
-            document.getElementById('auto-refresh-btn').style.display = 'inline-block';
-            document.getElementById('stop-refresh-btn').style.display = 'none';
-            document.getElementById('logs-container').style.display = 'block';
-            
-            // Fetch logs using the full node name
-            fetchNodeLogs(node.full_name);
-        }
-
-        async function fetchNodeLogs(nodeName) {
-            try {
-                if (!nodeName) {
-                    throw new Error("Node name is undefined or empty");
-                }
-                
-                const encodedNodeName = encodeURIComponent(nodeName).replace(/%2F/g, '');
-                const response = await fetch(`${API_BASE}/nodes/${encodedNodeName}/logs`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error ${response.status}`);
-                }
-                
-                const logs = await response.json();
-                
-                const logsContainer = document.getElementById('logs-container');
-                logsContainer.innerHTML = '';
-                
-                if (logs.length === 0) {
-                    logsContainer.innerHTML = '<div class="log-entry">No logs available for this node.</div>';
-                } else {
-                    logs.forEach(log => {
-                        const logEntry = document.createElement('div');
-                        logEntry.className = 'log-entry';
-                        
-                        const timestamp = log.timestamp ? 
-                            new Date((log.timestamp.sec * 1000) + (log.timestamp.nanosec / 1000000)).toISOString() : 
-                            '';
-                        
-                        const level = log.level || '';
-                        const message = log.message || '';
-                        
-                        logEntry.innerHTML = `
-                            <span class="log-time">${timestamp}</span>
-                            <span class="log-level ${level.toLowerCase()}">[${level}]</span>
-                            <span class="log-message">${message}</span>
-                        `;
-                        
-                        logsContainer.appendChild(logEntry);
-                    });
-                }
-                
-                logsContainer.scrollTop = logsContainer.scrollHeight;
-                
-                document.getElementById('log-status').innerHTML = 
-                    '<div class="status success">Loaded ' + logs.length + ' log entries</div>';
-            } catch (error) {
-                document.getElementById('log-status').innerHTML = 
-                    '<div class="status error">Failed to fetch logs: ' + error.message + '</div>';
-                console.error("Error fetching logs:", error);
+                console.error('Error fetching nodes:', error);
             }
         }
 
-        function refreshLogs() {
-            if (selectedNode) {
-                fetchNodeLogs(selectedNode);
-            }
-        }
-
-        function startAutoRefresh() {
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-            }
-            
-            autoRefreshInterval = setInterval(() => {
-                refreshLogs();
-            }, 1000);
-            
-            document.getElementById('auto-refresh-btn').style.display = 'none';
-            document.getElementById('stop-refresh-btn').style.display = 'inline-block';
-            document.getElementById('log-status').innerHTML = 
-                '<div class="status success">Auto-refresh enabled (1s interval)</div>';
-        }
-
-        function stopAutoRefresh() {
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-                autoRefreshInterval = null;
-            }
-            
-            document.getElementById('auto-refresh-btn').style.display = 'inline-block';
-            document.getElementById('stop-refresh-btn').style.display = 'none';
-            document.getElementById('log-status').innerHTML = 
-                '<div class="status">Auto-refresh stopped</div>';
-        }
 
         async function fetchTopics() {
             try {
@@ -594,8 +283,6 @@
                     topicsList.appendChild(topicItem);
                 }
             } catch (error) {
-                document.getElementById('topics-list').innerHTML = 
-                    `<div class="status error">Failed to fetch topics: ${error.message}</div>`;
             }
         }
         
@@ -656,8 +343,404 @@
             }
         }
 
+
+        function selectNode(node) {
+            try {
+                console.log("Selected node:", node);
+                if (!node || (!node.full_name && !node.name)) {
+                    console.error("Invalid node object:", node);
+                    alert("Error: Invalid node information");
+                    return;
+                }
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                // Open a new window first
+                const windowFeatures = 'width=1000,height=700,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no';
+                const win = window.open('about:blank', `node_logs_${Date.now()}`, windowFeatures);
+                if (!win) {
+                    alert('Popup was blocked. Please allow popups for this site in your browser settings.');
+                    return;
+                }
+                // Write the basic HTML structure to the new window
+                win.document.write('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Node Logs - ' + node.name + '</title></head><body></body></html>');
+                // Add CSS styles
+                const style = win.document.createElement('style');
+                style.textContent = `
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        margin: 20px;
+                        background-color: ${isDarkMode ? '#222' : '#f5f5f5'};
+                        color: ${isDarkMode ? '#fff' : '#222'};
+                    }
+                    .container {
+                        background: ${isDarkMode ? '#111' : 'white'};
+                        color: ${isDarkMode ? '#fff' : '#222'};
+                        padding: 20px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    }
+                    .log-container {
+                        max-height: 70vh;
+                        overflow-y: auto;
+                        border: 1px solid #444;
+                        border-radius: 4px;
+                        background: ${isDarkMode ? '#222' : '#f9f9f9'};
+                        margin-top: 15px;
+                    }
+                    .log-entry {
+                        padding: 8px 12px;
+                        border-bottom: 1px solid ${isDarkMode ? '#333' : '#eee'};
+                        font-family: 'Courier New', monospace;
+                        font-size: 0.9em;
+                    }
+                    .log-time {
+                        color: ${isDarkMode ? '#bbb' : '#666'};
+                        margin-right: 10px;
+                    }
+                    .log-level {
+                        margin-right: 10px;
+                        padding: 2px 6px;
+                        border-radius: 3px;
+                        font-weight: bold;
+                    }
+                    .log-level.info { background: ${isDarkMode ? '#26334a' : '#e3f2fd'}; color: ${isDarkMode ? '#90caf9' : '#1976d2'}; }
+                    .log-level.warn { background: ${isDarkMode ? '#4a3a26' : '#fff3e0'}; color: ${isDarkMode ? '#ffb74d' : '#f57c00'}; }
+                    .log-level.error { background: ${isDarkMode ? '#4a2626' : '#ffebee'}; color: ${isDarkMode ? '#ef9a9a' : '#d32f2f'}; }
+                    .log-level.debug { background: ${isDarkMode ? '#3a264a' : '#f3e5f5'}; color: ${isDarkMode ? '#ce93d8' : '#7b1fa2'}; }
+                    .status {
+                        padding: 8px 12px;
+                        border-radius: 4px;
+                        margin: 10px 0;
+                    }
+                    .status.success { background: ${isDarkMode ? '#1b3a2b' : '#e8f5e8'}; color: ${isDarkMode ? '#81c784' : '#2e7d32'}; border: 1px solid ${isDarkMode ? '#388e3c' : '#c8e6c9'}; }
+                    .status.error { background: ${isDarkMode ? '#4a2626' : '#ffebee'}; color: ${isDarkMode ? '#ef9a9a' : '#c62828'}; border: 1px solid ${isDarkMode ? '#d32f2f' : '#ffcdd2'}; }
+                    button {
+                        background: #28a745;
+                        color: white;
+                        border: none;
+                        padding: 8px 16px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        margin-right: 10px;
+                    }
+                    button:hover {
+                        background: #218838;
+                    }
+                    button#stop-refresh-btn {
+                        background: #dc3545;
+                    }
+                    button#stop-refresh-btn:hover {
+                        background: #c82333;
+                    }
+                `;
+                win.document.head.appendChild(style);
+                
+                // Create container elements
+                const container = win.document.createElement('div');
+                container.className = 'container';
+                win.document.body.appendChild(container);
+                
+                // Add buttons
+                const stopBtn = win.document.createElement('button');
+                stopBtn.id = 'stop-refresh-btn';
+                stopBtn.textContent = 'Stop Auto Refresh';
+                container.appendChild(stopBtn);
+                
+                const startBtn = win.document.createElement('button');
+                startBtn.id = 'auto-refresh-btn';
+                startBtn.textContent = 'Start Auto Refresh';
+                startBtn.style.display = 'none';
+                container.appendChild(startBtn);
+                
+                // Add logs container
+                const logsContainer = win.document.createElement('div');
+                logsContainer.id = 'logs-container';
+                logsContainer.className = 'log-container';
+                container.appendChild(logsContainer);
+                
+                // Add script with necessary variables
+                const script = win.document.createElement('script');
+                // Ensure node.full_name exists and is properly serialized
+                const nodeFullName = node.full_name || node.name;
+                script.text = `
+                    const API_BASE = "${API_BASE}";
+                    let selectedNode = "${nodeFullName}";
+                    let autoRefreshInterval = null;
+                    
+                    async function fetchNodeLogs(nodeName) {
+                        try {
+                            if (!nodeName) throw new Error('Node name is undefined or empty');
+                            
+                            console.log("Fetching logs for node:", nodeName);
+                            
+                            // Clean the node name string and prepare it for URL
+                            let cleanNodeName = nodeName;
+                            // Remove leading slash if present
+                            if (cleanNodeName.startsWith('/')) {
+                                cleanNodeName = cleanNodeName.substring(1);
+                            }
+                            
+                            // Special case: if node name contains slashes (like namespace/nodename),
+                            // we need to handle it differently
+                            let url = API_BASE + '/nodes/';
+                            
+                            // For node names with namespace, format as /namespace/node_name in the URL
+                            // Otherwise just use the node name directly
+                            url += cleanNodeName + '/logs';
+                            
+                            console.log("Request URL:", url);
+                            
+                            const response = await fetch(url);
+                            if (!response.ok) throw new Error('HTTP error ' + response.status);
+                            
+                            const logs = await response.json();
+                            const logsContainer = document.getElementById('logs-container');
+                            logsContainer.innerHTML = '';
+                            
+                            if (logs.length === 0) {
+                                logsContainer.innerHTML = '<div class="log-entry">No logs available for this node.</div>';
+                            } else {
+                                logs.forEach(log => {
+                                    const logEntry = document.createElement('div');
+                                    logEntry.className = 'log-entry';
+                                    
+                                    const timestamp = log.timestamp.sec + '.' + parseInt(log.timestamp.nanosec / 1000000);
+                                    const level = log.level || '';
+                                    const message = log.message || '';
+                                    
+                                    logEntry.innerHTML = 
+                                        '<span class="log-time">' + timestamp + '</span>' +
+                                        '<span class="log-level ' + level.toLowerCase() + '">[' + level + ']</span>' +
+                                        '<span class="log-message">' + message + '</span>';
+                                        
+                                    logsContainer.appendChild(logEntry);
+                                });
+                            }
+                            
+                            logsContainer.scrollTop = logsContainer.scrollHeight;
+                        } catch (error) {
+                            console.error('Error fetching logs:', error);
+                            const logsContainer = document.getElementById('logs-container');
+                            logsContainer.innerHTML = '<div class="log-entry status error">Error fetching logs: ' + error.message + '</div>';
+                        }
+                    }
+                    
+                    function refreshLogs() {
+                        if (selectedNode) fetchNodeLogs(selectedNode);
+                    }
+                    
+                    function startAutoRefresh() {
+                        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+                        
+                        autoRefreshInterval = setInterval(() => {
+                            refreshLogs();
+                        }, 100);
+                        
+                        document.getElementById('auto-refresh-btn').style.display = 'none';
+                        document.getElementById('stop-refresh-btn').style.display = 'inline-block';
+                    }
+                    
+                    function stopAutoRefresh() {
+                        if (autoRefreshInterval) {
+                            clearInterval(autoRefreshInterval);
+                            autoRefreshInterval = null;
+                        }
+                        
+                        document.getElementById('auto-refresh-btn').style.display = 'inline-block';
+                        document.getElementById('stop-refresh-btn').style.display = 'none';
+                    }
+                    
+                    // Add event listeners
+                    document.getElementById('stop-refresh-btn').addEventListener('click', stopAutoRefresh);
+                    document.getElementById('auto-refresh-btn').addEventListener('click', startAutoRefresh);
+                    
+                    // We will use DOMContentLoaded for initialization instead
+                    // This prevents trying to access elements before they exist
+                    console.log("Node logs script loaded, selectedNode:", selectedNode);
+                `;
+                
+                // Add the script first
+                win.document.body.appendChild(script);
+                
+                // Add a separate initialization script that will run after everything is loaded
+                const initScript = win.document.createElement('script');
+                initScript.text = `
+                    // Initial load - make sure this runs after all DOM elements and the main script are loaded
+                    document.addEventListener('DOMContentLoaded', function() {
+                        // Make sure we have a valid node name
+                        if (selectedNode) {
+                            console.log("Loading logs for node:", selectedNode);
+                            fetchNodeLogs(selectedNode);
+                            startAutoRefresh();
+                        } else {
+                            console.error("No valid node name found");
+                            document.getElementById('logs-container').innerHTML = '<div class="log-entry status error">Error: No valid node name provided</div>';
+                        }
+                    });
+                `;
+                win.document.body.appendChild(initScript);
+                
+                // Close the document and focus
+                win.document.close();
+                win.focus();
+                
+            } catch (error) {
+                console.error('Failed to open new window:', error);
+                alert('Could not open a new window. Error: ' + error.message);
+            }            // Nothing else to do - the popup window is handling everything
+        }
+
+        async function fetchNodeLogs(nodeName) {
+            try {
+                if (!nodeName) {
+                    throw new Error("Node name is undefined or empty");
+                }
+                
+                // Remove leading slash and then encode the node name
+                const nameWithoutLeadingSlash = nodeName.replace(/^\//, '');
+                // Get namespace and node name parts
+                const parts = nameWithoutLeadingSlash.split('/');
+                // If there's a namespace, encode it properly
+                let url = API_BASE + '/nodes/';
+                if (parts.length > 1) {
+                    const namespace = parts.slice(0, -1).join('/');
+                    const nodeName = parts[parts.length-1];
+                    url += namespace + '/' + nodeName;
+                } else {
+                    // No namespace, just node name
+                    url += nameWithoutLeadingSlash;
+                }
+                url += '/logs';
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+                
+                const logs = await response.json();
+                
+                const logsContainer = document.getElementById('logs-container');
+                logsContainer.innerHTML = '';
+                
+                if (logs.length === 0) {
+                    logsContainer.innerHTML = '<div class="log-entry">No logs available for this node.</div>';
+                } else {
+                    logs.forEach(log => {
+                        const logEntry = document.createElement('div');
+                        logEntry.className = 'log-entry';
+                        
+                        const timestamp = log.timestamp ? 
+                            new Date((log.timestamp.sec * 1000) + (log.timestamp.nanosec / 1000000)).toISOString() : 
+                            '';
+                        
+                        const level = log.level || '';
+                        const message = log.message || '';
+                        
+                        logEntry.innerHTML = `
+                            <span class="log-time">${timestamp}</span>
+                            <span class="log-level ${level.toLowerCase()}">[${level}]</span>
+                            <span class="log-message">${message}</span>
+                        `;
+                        
+                        logsContainer.appendChild(logEntry);
+                    });
+                }
+                
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+                
+                document.getElementById('log-status').innerHTML = 
+                    '<div class="status success">Loaded ' + logs.length + ' log entries</div>';
+            } catch (error) {
+                document.getElementById('log-status').innerHTML = 
+                    '<div class="status error">Failed to fetch logs: ' + error.message + '</div>';
+                console.error("Error fetching logs:", error);
+            }
+        }
+
+        function refreshLogs() {
+            if (selectedNode) {
+                fetchNodeLogs(selectedNode);
+            }
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            autoRefreshInterval = setInterval(() => {
+                refreshLogs();
+            }, 100);
+            
+            document.getElementById('auto-refresh-btn').style.display = 'none';
+            document.getElementById('stop-refresh-btn').style.display = 'inline-block';
+            document.getElementById('log-status').innerHTML = 
+                '<div class="status success">Auto-refresh enabled (0.1s interval)</div>';
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+            
+            document.getElementById('auto-refresh-btn').style.display = 'inline-block';
+            document.getElementById('stop-refresh-btn').style.display = 'none';
+            document.getElementById('log-status').innerHTML = 
+                '<div class="status">Auto-refresh stopped</div>';
+        }
+        
+        // ダークモード切り替え処理
+        const darkmodeToggle = document.getElementById('darkmode-toggle');
+        const darkmodeCss = document.getElementById('darkmode-css');
+        const lightmodeCss = document.getElementById('lightmode-css');
+        function setDarkMode(enabled) {
+            if (enabled) {
+                darkmodeCss.removeAttribute('disabled');
+                lightmodeCss.setAttribute('disabled', '');
+                document.body.classList.add('dark-mode');
+                document.body.classList.remove('light-mode');
+            } else {
+                darkmodeCss.setAttribute('disabled', '');
+                lightmodeCss.removeAttribute('disabled');
+                document.body.classList.remove('dark-mode');
+                document.body.classList.add('light-mode');
+            }
+            // 各要素のクラスも切り替え
+            const mode = enabled ? 'dark-mode' : 'light-mode';
+            const remove = enabled ? 'light-mode' : 'dark-mode';
+            [
+                '.container', '.node-card', '.log-container', '.log-entry', '.log-level', '.status', '.api-info', 'pre', '.tabs', '.tab-btn', '.system-list', '.system-item', '.system-item-name', '.system-item-detail', '#log-viewer-title'
+            ].forEach(sel => {
+                document.querySelectorAll(sel).forEach(e => {
+                    e.classList.add(mode);
+                    e.classList.remove(remove);
+                });
+            });
+            localStorage.setItem('darkmode', enabled ? '1' : '0');
+        }
+        darkmodeToggle.addEventListener('change', e => setDarkMode(e.target.checked));
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('darkmode');
+            if(saved === '1') {
+                darkmodeToggle.checked = true;
+                setDarkMode(true);
+            } else {
+                darkmodeToggle.checked = false;
+                setDarkMode(false);
+            }
+            const enabled = darkmodeToggle.checked;
+            const mode = enabled ? 'dark-mode' : 'light-mode';
+            const remove = enabled ? 'light-mode' : 'dark-mode';
+            [
+                '.container', '.node-card', '.log-container', '.log-entry', '.log-level', '.status', '.api-info', 'pre', '.tabs', '.tab-btn', '.system-list', '.system-item', '.system-item-name', '.system-item-detail', '#log-viewer-title'
+            ].forEach(sel => {
+                document.querySelectorAll(sel).forEach(e => {
+                    e.classList.add(mode);
+                    e.classList.remove(remove);
+                });
+            });
+        });
+
         window.onload = () => {
-            fetchApiInfo();
             fetchNodes();
             fetchTopics();
         };

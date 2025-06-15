@@ -133,7 +133,7 @@ void RestApiServer::setup_routes()
     handle_nodes(req, res);
   });
 
-  server_->Get(R"(/nodes/([^/]+)/logs)", [this](const httplib::Request & req, httplib::Response & res) {
+  server_->Get(R"(/nodes/(.*)/logs)", [this](const httplib::Request & req, httplib::Response & res) {
     handle_node_logs(req, res);
   });
   
@@ -189,20 +189,14 @@ void RestApiServer::handle_nodes(const httplib::Request &, httplib::Response & r
 {
   json response = json::array();
   if (log_viewer_base_) {
-    auto nodes = log_viewer_base_->get_nodes();
-
-    std::cout << "=== Nodes Count: " << nodes.size() << " ===" << std::endl;
-    
     size_t node_count = 0;
     
-    for (const auto & node : nodes) {
+    for (const auto & node : log_viewer_base_->get_nodes()) {
       json node_info = {
-        {"name", node.name},
-        {"namespace", node.ns},
-        {"full_name", node.full_name}
+        {"name", node.full_name}
       };
       
-      std::vector<std::string> node_filter = {node.name};
+      std::vector<std::string> node_filter = {node.full_name};
       auto logs = log_viewer_base_->get_filtered_logs(node_filter);
       node_info["log_count"] = logs.size();
       
@@ -221,41 +215,6 @@ void RestApiServer::handle_nodes(const httplib::Request &, httplib::Response & r
         }
         node_info["subscribers"] = sub_info;
       }
-      
-      if (node_count < 3 || node_count >= nodes.size() - 2) {
-        std::cout << "=== Node Element (" << node_count + 1 << "/" << nodes.size() << ") ===" << std::endl;
-        std::cout << "Name: " << node.name << std::endl;
-        std::cout << "Namespace: " << node.ns << std::endl;
-        std::cout << "Full Name: " << node.full_name << std::endl;
-        
-        if (!node.publishers.empty()) {
-          std::cout << "Publishers:" << std::endl;
-          for (const auto& [topic, types] : node.publishers) {
-            std::cout << "  " << topic << ": ";
-            for (const auto& type : types) {
-              std::cout << type << " ";
-            }
-            std::cout << std::endl;
-          }
-        }
-        
-        if (!node.subscribers.empty()) {
-          std::cout << "Subscribers:" << std::endl;
-          for (const auto& [topic, types] : node.subscribers) {
-            std::cout << "  " << topic << ": ";
-            for (const auto& type : types) {
-              std::cout << type << " ";
-            }
-            std::cout << std::endl;
-          }
-        }
-        std::cout << std::endl;
-        
-        std::cout << "Node JSON data:" << std::endl;
-        std::cout << node_info.dump(2) << std::endl;
-        std::cout << std::endl;
-      }
-      
       node_count++;
       response.push_back(node_info);
     }
@@ -267,29 +226,26 @@ void RestApiServer::handle_nodes(const httplib::Request &, httplib::Response & r
 void RestApiServer::handle_node_logs(const httplib::Request & req, httplib::Response & res)
 {
   std::string node_name = req.matches[1];
+  std::string decoded_node_name;
+  for (size_t i = 0; i < node_name.length(); ++i) {
+    if (node_name[i] == '%' && i + 2 < node_name.length()) {
+      std::string hex = node_name.substr(i + 1, 2);
+      if (hex == "2F" || hex == "2f") {
+        decoded_node_name += '/';
+        i += 2;
+      } else {
+        decoded_node_name += node_name[i];
+      }
+    } else {
+      decoded_node_name += node_name[i];
+    }
+  }
   
   bool node_exists = false;
   if (log_viewer_base_) {
-    auto nodes = log_viewer_base_->get_nodes();
-    std::cout << "=== Total Nodes Count: " << nodes.size() << " ===" << std::endl;
-    for (size_t i = 0; i < nodes.size(); ++i) {
-      std::cout << "Node [" << i + 1 << "/" << nodes.size() << "]: " << nodes[i].name;
-      if (!nodes[i].ns.empty()) {
-        std::cout << " (namespace: " << nodes[i].ns << ")";
-      }
-      std::cout << " - Full name: " << nodes[i].full_name << std::endl;
-    }
-    
-    std::cout << "Looking for node with name: '" << node_name << "'" << std::endl;
-    
-    for (const auto & node : nodes) {
-      // Try multiple matching strategies for node name
-      if (node.name == node_name || 
-          node.full_name == node_name ||
-          node.full_name == "/" + node_name ||
-          node.full_name.find(node_name) != std::string::npos) {
+    for (const auto & node : log_viewer_base_->get_nodes()) {
+      if (node.full_name.substr(1) == decoded_node_name) {
         node_exists = true;
-        std::cout << "Found matching node: " << node.full_name << std::endl;
         break;
       }
     }
@@ -307,71 +263,17 @@ void RestApiServer::handle_node_logs(const httplib::Request & req, httplib::Resp
     return;
   }
 
-  // Get logs for the specific node
   json response = json::array();
   if (log_viewer_base_) {
-    // Don't add slash to node_name as log.name doesn't include it
     std::vector<std::string> node_filter = {node_name};
     auto logs = log_viewer_base_->get_filtered_logs(node_filter);
-    
-    // Print logs count to stdout
-    std::cout << "=== Node Logs: " << node_name << " (Total: " << logs.size() << " logs) ===" << std::endl;
-    
-    // Debug information to check the first few log names we're searching
-    auto pending_logs = log_viewer_base_->get_pending_logs();
-    std::cout << "First 5 log entries in pending_logs (Total: " << pending_logs.size() << "):" << std::endl;
-    int count = 0;
-    for (const auto & log : pending_logs) {
-      if (count < 5) {
-        try {
-          if (log.msg.length() > 10000) {
-            std::cout << "  Log name: '" << log.name << "', message: [TOO LARGE - SKIPPED]" << std::endl;
-          } else {
-            std::cout << "  Log name: '" << log.name << "', message: " << log.msg << std::endl;
-          }
-          count++;
-        } catch (const std::exception& e) {
-          std::cout << "  Error processing log: " << e.what() << std::endl;
-        }
-      } else {
-        break;
-      }
-    }
-    
     size_t log_idx = 0;
     for (const auto & log : logs) {
       try {
-        // Skip obviously corrupted messages
         if (log.msg.length() > 10000) {
-          std::cout << "Skipping suspiciously large log message (length: " 
-                    << log.msg.length() << ")" << std::endl;
           continue;
         }
-        
-        // Print first 3 and last 2 logs to stdout
-        if (log_idx < 3 || log_idx >= logs.size() - 2) {
-          std::cout << "Log [" << log_idx + 1 << "/" << logs.size() << "]: ";
-          std::cout << "[" << log_viewer_base::level_to_string(static_cast<log_viewer_base::LogLevel>(log.level)) << "] ";
-          std::cout << log.name << ": " << log.msg << std::endl;
-          
-          // Print JSON for this log entry
-          json log_entry = {
-            {"timestamp", {
-              {"sec", log.stamp.sec},
-              {"nanosec", log.stamp.nanosec}
-            }},
-            {"level", log_viewer_base::level_to_string(static_cast<log_viewer_base::LogLevel>(log.level))},
-            {"name", log.name},
-            {"message", log.msg},
-            {"file", log.file},
-            {"function", log.function},
-            {"line", log.line}
-          };
-          std::cout << "Log JSON:" << std::endl;
-          std::cout << log_entry.dump(2) << std::endl;
-          std::cout << std::endl;
-        }
-        
+
         log_idx++;
         json log_entry = {
           {"timestamp", {
@@ -391,10 +293,6 @@ void RestApiServer::handle_node_logs(const httplib::Request & req, httplib::Resp
       }
     }
   }
-
-  std::cout << "=== Complete Node Logs JSON Response ===" << std::endl;
-  std::cout << response.dump(2) << std::endl;
-  std::cout << std::endl;
 
   setup_cors(res);
   res.set_content(response.dump(), "application/json");
@@ -420,13 +318,7 @@ void RestApiServer::handle_all_logs(const httplib::Request & req, httplib::Respo
   if (log_viewer_base_) {
     auto all_pending_logs = log_viewer_base_->get_pending_logs();
     
-    std::cout << "=== All Logs (Total: " << all_pending_logs.size() << " logs) ===" << std::endl;
-    std::cout << "Severity filter: " << (severity_filter.empty() ? "None" : severity_filter) << std::endl;
-    std::cout << "Limit: " << limit << std::endl;
-    
     size_t count = 0;
-    size_t filtered_count = 0;
-    
     for (const auto & log : all_pending_logs) {
       try {
         if (log.msg.length() > 10000) {
@@ -458,28 +350,14 @@ void RestApiServer::handle_all_logs(const httplib::Request & req, httplib::Respo
         };
       
         response.push_back(log_entry);
-        filtered_count++;
-        
-        count++;
-        if (count >= limit) {
+        if (++count >= limit) {
           break;
         }
       } catch (const std::exception& e) {
         std::cout << "Error processing log entry: " << e.what() << std::endl;
       }
     }
-    
-    std::cout << "=== Complete Logs JSON Response (first 10 entries) ===" << std::endl;
-    json preview = json::array();
-    size_t preview_count = std::min(size_t(10), response.size());
-    for (size_t i = 0; i < preview_count; i++) {
-      preview.push_back(response[i]);
-    }
-    std::cout << preview.dump(2) << std::endl;
-    std::cout << "Total JSON entries: " << response.size() << std::endl;
-    std::cout << std::endl;
   }
-
   setup_cors(res);
   res.set_content(response.dump(), "application/json");
 }
@@ -588,9 +466,6 @@ int main(int argc, char ** argv)
   });
   
   try {
-    std::cout << "REST API Server is running. Press Ctrl+C to terminate." << std::endl;
-    std::cout << "Main thread will now process ROS2 callbacks and communications." << std::endl;
-    
     while (!g_shutdown_requested) {
       executor.spin_some(std::chrono::milliseconds(100));
     }
@@ -599,20 +474,12 @@ int main(int argc, char ** argv)
     g_shutdown_requested.store(true);
   }
   
-  // Cleanup
   if (status_thread.joinable()) {
-    std::cout << "Waiting for status monitoring thread to terminate..." << std::endl;
     status_thread.join();
-    std::cout << "Status monitoring thread joined." << std::endl;
   }
   
-  std::cout << "Stopping HTTP server..." << std::endl;
   node->stop_server();
-  std::cout << "HTTP server stopped." << std::endl;
-  
-  std::cout << "Shutting down ROS2..." << std::endl;
   rclcpp::shutdown();
-  std::cout << "ROS2 shutdown complete." << std::endl;
   
   return 0;
 }
