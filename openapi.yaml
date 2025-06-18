@@ -1,0 +1,466 @@
+openapi: 3.0.3
+info:
+  title: ROS2 Console REST API
+  description: |
+    REST API for accessing ROS2 system information and logs. This API provides endpoints
+    to browse ROS2 nodes, view logs, and explore the ROS2 graph structure including
+    topics and services.
+    
+    ## Getting Started
+    1. Start the API server: `docker compose up`
+    2. Access the API at: `http://localhost:8080`
+    3. View example client at: `http://localhost:8081`
+    
+    ## Features
+    - Real-time log streaming from ROS2 nodes
+    - Complete ROS2 graph exploration (nodes, topics, services)
+    - Support for namespaced nodes
+    - Configurable log filtering and pagination
+    - CORS support for web clients
+    
+  version: 1.0.0
+  contact:
+    name: ROS2 Console Browser
+    url: https://github.com/your-org/ros2_console_browser
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: http://0.0.0.0:8080
+    description: Docker container server
+
+tags:
+  - name: system
+    description: API system information
+  - name: nodes
+    description: ROS2 node operations
+  - name: logs
+    description: Log viewing and filtering
+  - name: graph
+    description: ROS2 graph structure (topics and services)
+
+paths:
+  /:
+    get:
+      tags:
+        - system
+      summary: Get API information
+      description: Returns API metadata, version information, and available endpoints
+      responses:
+        '200':
+          description: API information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiInfo'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /nodes:
+    get:
+      tags:
+        - nodes
+      summary: List all ROS2 nodes
+      description: |
+        Returns a list of all discovered ROS2 nodes in the system, including their
+        publisher and subscriber information, and log counts.
+      responses:
+        '200':
+          description: Nodes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Node'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /nodes/{node_name}/logs:
+    get:
+      tags:
+        - nodes
+        - logs
+      summary: Get logs for a specific node
+      description: |
+        Returns log entries for the specified node. The node_name parameter supports
+        namespaced nodes by URL-encoding the full path (e.g., `/namespace/node` becomes
+        `%2Fnamespace%2Fnode`).
+      parameters:
+        - name: node_name
+          in: path
+          required: true
+          description: |
+            The name of the ROS2 node. For namespaced nodes, include the full path
+            (e.g., "namespace/node_name" or URL-encoded "%2Fnamespace%2Fnode_name").
+          schema:
+            type: string
+          examples:
+            simple_node:
+              value: "talker"
+              description: Simple node without namespace
+            namespaced_node:
+              value: "my_namespace/talker"
+              description: Namespaced node
+            encoded_node:
+              value: "%2Fmy_namespace%2Ftalker"
+              description: URL-encoded namespaced node
+      responses:
+        '200':
+          description: Node logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LogEntry'
+        '404':
+          description: Node not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /logs:
+    get:
+      tags:
+        - logs
+      summary: Get system logs with filtering
+      description: |
+        Returns log entries from all nodes with optional filtering by severity level
+        and result limiting. Useful for getting an overview of system-wide logging.
+      parameters:
+        - name: severity
+          in: query
+          required: false
+          description: |
+            Filter logs by severity level. Case-insensitive. Multiple values can be
+            specified by repeating the parameter.
+          schema:
+            type: string
+            enum: [INFO, WARN, ERROR, DEBUG]
+          examples:
+            error_only:
+              value: "ERROR"
+              description: Show only error logs
+            warn_and_error:
+              value: "WARN"
+              description: Show warning logs (repeat parameter for multiple levels)
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of log entries to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 100
+          examples:
+            default_limit:
+              value: 100
+              description: Default limit
+            large_batch:
+              value: 1000
+              description: Larger batch for bulk processing
+      responses:
+        '200':
+          description: Logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LogEntry'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /topics:
+    get:
+      tags:
+        - graph
+      summary: List all ROS2 topics
+      description: |
+        Returns a mapping of all discovered ROS2 topics to the nodes that interact
+        with them (publishers and subscribers).
+      responses:
+        '200':
+          description: Topics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of node names that interact with this topic
+              example:
+                "/chatter":
+                  - "talker"
+                  - "listener"
+                "/parameter_events":
+                  - "talker"
+                  - "listener"
+                  - "/ros2_console_rest_api_node"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /services:
+    get:
+      tags:
+        - graph
+      summary: List all ROS2 services
+      description: |
+        Returns a mapping of all discovered ROS2 services to the nodes that provide them.
+      responses:
+        '200':
+          description: Services retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of node names that provide this service
+              example:
+                "/talker/describe_parameters":
+                  - "talker"
+                "/talker/get_parameter_types":
+                  - "talker"
+                "/talker/list_parameters":
+                  - "talker"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    ApiInfo:
+      type: object
+      required:
+        - version
+        - message
+        - endpoints
+      properties:
+        version:
+          type: string
+          description: API version
+          example: "1.0.0"
+        message:
+          type: string
+          description: Welcome message
+          example: "ROS2 Console REST API"
+        endpoints:
+          type: array
+          items:
+            type: string
+          description: List of available endpoints
+          example:
+            - "GET /"
+            - "GET /nodes"
+            - "GET /nodes/{node_name}/logs"
+            - "GET /logs"
+            - "GET /topics"
+            - "GET /services"
+
+    Node:
+      type: object
+      required:
+        - name
+        - log_count
+      properties:
+        name:
+          type: string
+          description: Full node name including namespace if applicable
+          example: "/namespace/talker"
+        full_name:
+          type: string
+          description: Alternative full name representation
+          example: "/namespace/talker"
+        log_count:
+          type: integer
+          minimum: 0
+          description: Number of log entries available for this node
+          example: 42
+        publishers:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Map of published topics to their message types
+          example:
+            "/chatter": ["std_msgs/msg/String"]
+            "/rosout": ["rcl_interfaces/msg/Log"]
+        subscribers:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Map of subscribed topics to their message types
+          example:
+            "/parameter_events": ["rcl_interfaces/msg/ParameterEvent"]
+
+    LogEntry:
+      type: object
+      required:
+        - timestamp
+        - level
+        - message
+      properties:
+        timestamp:
+          $ref: '#/components/schemas/Timestamp'
+        level:
+          type: string
+          enum: [INFO, WARN, ERROR, DEBUG, FATAL]
+          description: Log severity level
+          example: "INFO"
+        name:
+          type: string
+          description: Logger name (usually the node name)
+          example: "talker"
+        message:
+          type: string
+          description: The actual log message content
+          example: "Publishing: Hello World: 123"
+        file:
+          type: string
+          description: Source file where the log was generated
+          example: "publisher_member_function.cpp"
+        function:
+          type: string
+          description: Function name where the log was generated
+          example: "timer_callback"
+        line:
+          type: integer
+          minimum: 1
+          description: Line number in the source file
+          example: 35
+
+    Timestamp:
+      type: object
+      required:
+        - sec
+        - nanosec
+      properties:
+        sec:
+          type: integer
+          format: int64
+          description: Seconds since Unix epoch
+          example: 1701234567
+        nanosec:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 999999999
+          description: Nanoseconds component
+          example: 123456789
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type or code
+          example: "NOT_FOUND"
+        message:
+          type: string
+          description: Human-readable error description
+          example: "Node 'invalid_node' not found"
+        details:
+          type: string
+          description: Additional error details or troubleshooting information
+          example: "Available nodes: talker, listener"
+
+  responses:
+    NotFound:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "NOT_FOUND"
+            message: "Node 'invalid_node' not found"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "INTERNAL_ERROR"
+            message: "Failed to retrieve system information"
+
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "BAD_REQUEST"
+            message: "Invalid severity level. Must be one of: INFO, WARN, ERROR, DEBUG"
+
+  headers:
+    CORS-Headers:
+      description: CORS headers for cross-origin requests
+      schema:
+        type: object
+        properties:
+          Access-Control-Allow-Origin:
+            type: string
+            example: "*"
+          Access-Control-Allow-Methods:
+            type: string
+            example: "GET, POST, OPTIONS"
+          Access-Control-Allow-Headers:
+            type: string
+            example: "Content-Type, Authorization"
+
+security: []
+
+externalDocs:
+  description: Project Repository and Documentation
+  url: https://github.com/your-org/ros2_console_browser
