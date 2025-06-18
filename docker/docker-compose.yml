@@ -1,0 +1,15 @@
+version: '3.4'
+services:
+  ros2_logging_server:
+    container_name: ros2_logging_server_container
+    build:
+        context: ..
+        dockerfile: docker/Dockerfile
+    network_mode: host
+    working_dir: /root/ros2_ws
+    tty: true
+    ports:
+      - "8080:8080"
+    command: ["/start_test.sh"]
+
+
