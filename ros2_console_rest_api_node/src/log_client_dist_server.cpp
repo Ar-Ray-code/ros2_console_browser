@@ -23,6 +23,7 @@ public:
         declare_parameter("qr_location", "cli");
         declare_parameter("rest_api_server_ip", "localhost");
         declare_parameter("rest_api_server_port", 8080);
+        declare_parameter("target_html", "./src/ros2_console_browser/ros2_console_rest_api_node/example/client.html");
         
         target_ip_ = get_parameter("target_ip").as_string();
         target_port_ = get_parameter("target_port").as_int();
@@ -32,6 +33,7 @@ public:
         qr_location_ = get_parameter("qr_location").as_string();
         rest_api_server_ip_ = get_parameter("rest_api_server_ip").as_string();
         rest_api_server_port_ = get_parameter("rest_api_server_port").as_int();
+        target_html_ = get_parameter("target_html").as_string();
         
         std::cout << "Starting Log Client Distribution Server" << std::endl;
         std::cout << "Client Distribution Server will run on " << target_ip_ << ":" << target_port_ << std::endl;
@@ -60,6 +62,7 @@ private:
     std::string qr_location_;
     std::string rest_api_server_ip_;
     int rest_api_server_port_;
+    std::string target_html_;
     std::string client_html_path_;
     std::unique_ptr<httplib::Server> server_;
     std::thread server_thread_;
@@ -67,30 +70,29 @@ private:
     
     std::string findClientHtml()
     {
-        std::vector<std::string> possible_paths = {
-            "./example/client.html",
-            "../example/client.html",
-            "../../example/client.html",
-            "./client.html",
-            "../client.html",
-            "./ros2_console_rest_api_node/example/client.html",
-            std::filesystem::current_path() / "example" / "client.html"
-        };
-        
-        for (const auto& path : possible_paths) {
-            if (std::filesystem::exists(path)) {
-                return std::filesystem::absolute(path);
+        if (!target_html_.empty()) {
+            if (std::filesystem::exists(target_html_)) {
+                return std::filesystem::absolute(target_html_);
             }
-        }
-        
-        try {
-            for (const auto& entry : std::filesystem::recursive_directory_iterator(".")) {
-                if (entry.is_regular_file() && entry.path().filename() == "client.html") {
-                    return std::filesystem::absolute(entry.path());
+            
+            if (std::filesystem::exists(target_html_ + ".html")) {
+                return std::filesystem::absolute(target_html_ + ".html");
+            }
+            
+            try {
+                for (const auto& entry : std::filesystem::recursive_directory_iterator(".")) {
+                    if (entry.is_regular_file() && entry.path().filename() == target_html_) {
+                        return std::filesystem::absolute(entry.path());
+                    }
+                    if (entry.is_regular_file() && entry.path().filename() == (target_html_ + ".html")) {
+                        return std::filesystem::absolute(entry.path());
+                    }
                 }
+            } catch (const std::exception& e) {
+                std::cerr << "Error searching for target HTML: " << e.what() << std::endl;
             }
-        } catch (const std::exception& e) {
-            std::cerr << "Error searching for client.html: " << e.what() << std::endl;
+            
+            std::cerr << "Could not find specified target_html: " << target_html_ << std::endl;
         }
         
         return "";
@@ -193,18 +195,42 @@ private:
             res.set_content(content, "text/html");
         });
         
-        server_->Get(R"(/(style\.css|darkmode\.css|lightmode\.css))", [this](const httplib::Request& req, httplib::Response& res) {
+        server_->Get(R"(/(.+\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)))", [this](const httplib::Request& req, httplib::Response& res) {
             std::string filename = req.path.substr(1); // remove leading '/'
             std::string file_path = std::filesystem::path(client_html_path_).parent_path() / filename;
+            
             if (!std::filesystem::exists(file_path)) {
                 res.status = 404;
                 res.set_content("Not Found", "text/plain");
                 return;
             }
+            
             std::ifstream file(file_path, std::ios::binary);
+            if (!file.is_open()) {
+                res.status = 500;
+                res.set_content("Failed to open file", "text/plain");
+                return;
+            }
+            
             std::stringstream buffer;
             buffer << file.rdbuf();
-            res.set_content(buffer.str(), "text/css");
+            
+            std::string extension = std::filesystem::path(filename).extension();
+            std::string content_type = "text/plain";
+            
+            if (extension == ".css") content_type = "text/css";
+            else if (extension == ".js") content_type = "application/javascript";
+            else if (extension == ".png") content_type = "image/png";
+            else if (extension == ".jpg" || extension == ".jpeg") content_type = "image/jpeg";
+            else if (extension == ".gif") content_type = "image/gif";
+            else if (extension == ".ico") content_type = "image/x-icon";
+            else if (extension == ".svg") content_type = "image/svg+xml";
+            else if (extension == ".woff") content_type = "font/woff";
+            else if (extension == ".woff2") content_type = "font/woff2";
+            else if (extension == ".ttf") content_type = "font/truetype";
+            else if (extension == ".eot") content_type = "application/vnd.ms-fontobject";
+            
+            res.set_content(buffer.str(), content_type.c_str());
         });
         
         server_->Get("/info", [this](const httplib::Request&, httplib::Response& res) {
@@ -225,6 +251,7 @@ private:
             json_response += "  \"rest_api_server_port\": " + std::to_string(rest_api_server_port_) + ",\n";
             json_response += "  \"detected_server_ip\": \"" + server_ip + "\",\n";
             json_response += "  \"api_base_url\": \"" + api_base + "\",\n";
+            json_response += "  \"target_html\": \"" + target_html_ + "\",\n";
             json_response += "  \"client_html_path\": \"" + client_html_path_ + "\"\n";
             json_response += "}";
             
